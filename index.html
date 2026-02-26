@@ -35,7 +35,7 @@
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     
     <style>
-        /* Styles existants conservés... */
+        /* Styles identiques à la version précédente - conservés pour la lisibilité */
         * {
             margin: 0;
             padding: 0;
@@ -49,7 +49,6 @@
             overflow-x: hidden;
         }
 
-        /* Header modifié pour inclure le bouton menu */
         .header {
             background: #1e1e1e;
             padding: 16px 20px;
@@ -82,7 +81,6 @@
             margin-top: 4px;
         }
 
-        /* Bouton menu hamburger */
         .header-menu-btn {
             background: none;
             border: none;
@@ -315,10 +313,9 @@
             transform: scale(0.9);
         }
 
-        /* Menu déroulant (speed dial) positionné sous le header */
         .speed-dial {
             position: fixed;
-            top: 80px; /* juste sous le header (70-80px selon la hauteur du header) */
+            top: 80px;
             right: 20px;
             display: flex;
             flex-direction: column;
@@ -1442,6 +1439,75 @@
         }
 
         /* Styles pour la gestion des familles */
+        .category-item {
+            background: #121212;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .category-name {
+            font-weight: 500;
+            color: #e0e0e0;
+        }
+
+        .category-champs-summary {
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .champ-badge {
+            background: #2a2a2a;
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+
+        .category-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .category-config-btn {
+            background: #2a2a2a;
+            border: 1px solid #333;
+            color: #03dac6;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .new-category-input {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .new-category-input .btn-secondary {
+            width: auto;
+            flex-shrink: 0;
+        }
+
+        /* Modal de configuration des champs d'une catégorie */
         .field-config-item {
             background: #121212;
             padding: 12px;
@@ -1455,10 +1521,22 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 8px;
+            gap: 8px;
+        }
+
+        .field-header input[type="text"] {
+            flex: 2;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 6px 10px;
+            color: #e0e0e0;
+            font-size: 13px;
         }
 
         .field-type-select {
-            background: #2a2a2a;
+            flex: 1;
+            background: #1e1e1e;
             color: #e0e0e0;
             border: 1px solid #333;
             border-radius: 6px;
@@ -1495,120 +1573,15 @@
             margin-top: 8px;
         }
 
-        .form-step {
-            display: none;
-        }
-
-        .form-step.active {
-            display: block;
-        }
-
-        .step-indicator {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .step-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #333;
-            transition: all 0.3s;
-        }
-
-        .step-dot.active {
-            background: #bb86fc;
-            transform: scale(1.2);
-        }
-
-        .step-nav {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .step-nav-btn {
-            flex: 1;
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            font-size: 15px;
-            font-weight: 600;
+        .custom-field-required input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
             cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .step-nav-btn.prev {
-            background: #2a2a2a;
-            color: #e0e0e0;
-            border: 1px solid #333;
-        }
-
-        .step-nav-btn.next {
-            background: linear-gradient(135deg, #bb86fc 0%, #9965f4 100%);
-            color: #000;
-        }
-
-        .stock-low-indicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #ff9800;
-            border-radius: 50%;
-            margin-right: 4px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .stock-very-low-indicator {
-            background: #cf6679;
-            animation: pulse 1s infinite;
-        }
-
-        .category-management {
-            margin-bottom: 20px;
-        }
-
-        .category-item {
-            background: #121212;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            border: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .category-name {
-            font-weight: 500;
-            color: #e0e0e0;
-        }
-
-        .category-fields {
-            background: #1a1a1a;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 8px;
-            border-left: 3px solid #333;
-        }
-
-        .new-category-input {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .new-category-input .btn-secondary {
-            width: auto;
-            flex-shrink: 0;
+        .custom-field-required label {
+            font-size: 13px;
+            color: #aaa;
         }
     </style>
 </head>
@@ -1905,34 +1878,36 @@
     </div>
 
     <!-- Menu déroulant (speed dial) -->
-<div id="speed-dial" class="speed-dial">
-    <div class="speed-dial-item" onclick="navigateTo('dashboard')">
-        <span class="speed-dial-icon">🏠</span>
-        <span class="speed-dial-label">Accueil</span>
+    <div id="speed-dial" class="speed-dial">
+        <div class="speed-dial-item" onclick="navigateTo('dashboard')">
+            <span class="speed-dial-icon">🏠</span>
+            <span class="speed-dial-label">Accueil</span>
+        </div>
+        <div class="speed-dial-item" onclick="navigateTo('locations')">
+            <span class="speed-dial-icon">📍</span>
+            <span class="speed-dial-label">Emplacements</span>
+        </div>
+        <div class="speed-dial-item" onclick="navigateTo('inventory')">
+            <span class="speed-dial-icon">📋</span>
+            <span class="speed-dial-label">Inventaire</span>
+        </div>
+        <div class="speed-dial-item" onclick="navigateTo('search')">
+            <span class="speed-dial-icon">🔍</span>
+            <span class="speed-dial-label">Recherche</span>
+        </div>
+        <div class="speed-dial-item" onclick="navigateTo('familles')">
+            <span class="speed-dial-icon">📁</span>
+            <span class="speed-dial-label">Familles</span>
+        </div>
+        <div class="speed-dial-item" onclick="navigateTo('import-export')">
+            <span class="speed-dial-icon">📊</span>
+            <span class="speed-dial-label">Export</span>
+        </div>
     </div>
-    <div class="speed-dial-item" onclick="navigateTo('locations')">
-        <span class="speed-dial-icon">📍</span>
-        <span class="speed-dial-label">Emplacements</span>
-    </div>
-    <div class="speed-dial-item" onclick="navigateTo('inventory')">
-        <span class="speed-dial-icon">📋</span>
-        <span class="speed-dial-label">Inventaire</span>
-    </div>
-    <div class="speed-dial-item" onclick="navigateTo('search')">
-        <span class="speed-dial-icon">🔍</span>
-        <span class="speed-dial-label">Recherche</span>
-    </div>
-    <div class="speed-dial-item" onclick="navigateTo('familles')">
-        <span class="speed-dial-icon">📁</span>
-        <span class="speed-dial-label">Familles</span>
-    </div>
-    <div class="speed-dial-item" onclick="navigateTo('import-export')">
-        <span class="speed-dial-icon">📊</span>
-        <span class="speed-dial-label">Export</span>
-    </div>
-</div>
 
-    <!-- Modals (inchangées) -->
+    <!-- Modals -->
+
+    <!-- Modal d'ajout/modification de famille -->
     <div id="add-famille-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1955,17 +1930,29 @@
                     </div>
                 </div>
                 
-                <div class="detail-section">
-                    <div class="section-title">Champs personnalisés (communs à toutes les catégories)</div>
-                    <div id="custom-fields-list"></div>
-                    <button type="button" class="btn-secondary" onclick="addCustomField()">+ Ajouter un champ</button>
-                </div>
-                
                 <button type="submit" class="btn-primary">Enregistrer</button>
             </form>
         </div>
     </div>
 
+    <!-- NOUVEAU MODAL : Configuration des champs d'une catégorie -->
+    <div id="categorie-champs-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="categorie-champs-title">Configurer les champs</div>
+                <button class="close-btn" onclick="closeModal('categorie-champs-modal')">&times;</button>
+            </div>
+            <form onsubmit="saveCategorieChamps(event)">
+                <input type="hidden" id="current-famille-id">
+                <input type="hidden" id="current-categorie-nom">
+                <div id="categorie-champs-list"></div>
+                <button type="button" class="btn-secondary" onclick="addCategorieChamp()">+ Ajouter un champ</button>
+                <button type="submit" class="btn-primary">Enregistrer les champs</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal d'ajout d'article -->
     <div id="add-article-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -2001,7 +1988,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Catégorie *</label>
-                        <select class="form-select" id="article-categorie-select" required>
+                        <select class="form-select" id="article-categorie-select" required onchange="onCategorieSelectChange()">
                             <option value="">Sélectionnez une catégorie</option>
                         </select>
                     </div>
@@ -2042,6 +2029,7 @@
         </div>
     </div>
 
+    <!-- Modal d'édition d'article -->
     <div id="edit-article-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -2084,6 +2072,7 @@
         </div>
     </div>
 
+    <!-- Modal d'ajout d'emplacement -->
     <div id="add-location-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -2104,6 +2093,7 @@
         </div>
     </div>
 
+    <!-- Modal de déplacement d'article -->
     <div id="move-article-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -2128,6 +2118,7 @@
         </div>
     </div>
 
+    <!-- Modal d'action sur le stock -->
     <div id="stock-action-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -2152,23 +2143,7 @@
     <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script>
-        // ===== NOUVELLES FONCTIONS POUR LE MENU DÉROULANT =====
-        function toggleMenu() {
-            document.getElementById('speed-dial').classList.toggle('open');
-        }
-        
-        function closeMenu() {
-            document.getElementById('speed-dial').classList.remove('open');
-        }
-
-        // Fermer le menu si on clique ailleurs
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.header-menu-btn') && !e.target.closest('.speed-dial')) {
-                closeMenu();
-            }
-        });
-
-        // ===== FONCTIONS EXISTANTES (inchangées) =====
+        // ===== VARIABLES GLOBALES =====
         let articles = JSON.parse(localStorage.getItem('inventory_articles')) || [];
         let locations = JSON.parse(localStorage.getItem('inventory_locations')) || [];
         let familles = JSON.parse(localStorage.getItem('inventory_familles')) || [];
@@ -2176,6 +2151,7 @@
         let currentArticleId = null;
         let currentStockAction = null;
         let currentFamilleId = null;
+        let currentCategorieNom = null;
         
         let html5QrCode = null;
         let isScannerActive = false;
@@ -2190,7 +2166,37 @@
 
         let lastExportTimestamps = JSON.parse(localStorage.getItem('inventory_last_exports')) || {};
 
-        // Initialisation des données par défaut
+        // Migration des données
+        function migrateFamilles() {
+            let modified = false;
+            familles.forEach(fam => {
+                if (fam.champsPersonnalises && Array.isArray(fam.champsPersonnalises)) {
+                    if (fam.categories && fam.categories.length > 0 && typeof fam.categories[0] === 'string') {
+                        const oldCategories = fam.categories;
+                        const oldChamps = fam.champsPersonnalises;
+                        fam.categories = oldCategories.map(nom => ({
+                            nom: nom,
+                            champs: oldChamps.map(ch => ({ ...ch }))
+                        }));
+                        delete fam.champsPersonnalises;
+                        modified = true;
+                    }
+                }
+                else if (fam.categories && fam.categories.length > 0 && typeof fam.categories[0] === 'string') {
+                    fam.categories = fam.categories.map(nom => ({ nom: nom, champs: [] }));
+                    modified = true;
+                }
+                else if (fam.categories && fam.categories.length > 0 && typeof fam.categories[0] === 'object') {
+                    fam.categories.forEach(cat => {
+                        if (!cat.champs) cat.champs = [];
+                    });
+                    modified = true;
+                }
+            });
+            if (modified) saveToStorage();
+        }
+
+        // Initialisation par défaut
         if (locations.length === 0) {
             locations = [
                 { id: Date.now(), name: 'ENTREPÔT PRINCIPAL', description: 'STOCKAGE PRINCIPAL' },
@@ -2205,27 +2211,42 @@
                 {
                     id: Date.now(),
                     nom: 'BOULONNERIE',
-                    categories: ['VIS', 'ECROU', 'RONDEL'],
-                    champsPersonnalises: [
-                        { id: 1, label: 'MATÉRIAU', type: 'texte', obligatoire: false, ordre: 1 },
-                        { id: 2, label: 'FINITION', type: 'texte', obligatoire: false, ordre: 2 },
-                        { id: 3, label: 'POIDS', type: 'nombre', obligatoire: false, ordre: 3 }
+                    categories: [
+                        { 
+                            nom: 'VIS', 
+                            champs: [
+                                { id: 1, label: 'MATÉRIAU', type: 'texte', obligatoire: false, ordre: 1 },
+                                { id: 2, label: 'FINITION', type: 'texte', obligatoire: false, ordre: 2 },
+                                { id: 3, label: 'POIDS', type: 'nombre', obligatoire: false, ordre: 3 }
+                            ]
+                        },
+                        { nom: 'ECROU', champs: [] },
+                        { nom: 'RONDEL', champs: [] }
                     ]
                 },
                 {
                     id: Date.now() + 1,
                     nom: 'OUTILLAGE',
-                    categories: ['PERCEUSE', 'TOURNEVIS', 'MARTEAU'],
-                    champsPersonnalises: [
-                        { id: 4, label: 'TYPE', type: 'texte', obligatoire: true, ordre: 1 },
-                        { id: 5, label: 'PUISSANCE', type: 'texte', obligatoire: false, ordre: 2 },
-                        { id: 6, label: 'VOLTAGE', type: 'texte', obligatoire: false, ordre: 3 }
+                    categories: [
+                        { 
+                            nom: 'PERCEUSE', 
+                            champs: [
+                                { id: 4, label: 'TYPE', type: 'texte', obligatoire: true, ordre: 1 },
+                                { id: 5, label: 'PUISSANCE', type: 'texte', obligatoire: false, ordre: 2 },
+                                { id: 6, label: 'VOLTAGE', type: 'texte', obligatoire: false, ordre: 3 }
+                            ]
+                        },
+                        { nom: 'TOURNEVIS', champs: [] },
+                        { nom: 'MARTEAU', champs: [] }
                     ]
                 }
             ];
             saveToStorage();
+        } else {
+            migrateFamilles();
         }
 
+        // Fonctions de stockage
         function saveToStorage() {
             localStorage.setItem('inventory_articles', JSON.stringify(articles));
             localStorage.setItem('inventory_locations', JSON.stringify(locations));
@@ -2245,7 +2266,21 @@
             saveToStorage();
         }
 
-        // Navigation (modifiée pour fermer le menu)
+        // Navigation
+        function toggleMenu() {
+            document.getElementById('speed-dial').classList.toggle('open');
+        }
+        
+        function closeMenu() {
+            document.getElementById('speed-dial').classList.remove('open');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.header-menu-btn') && !e.target.closest('.speed-dial')) {
+                closeMenu();
+            }
+        });
+
         function navigateTo(page) {
             console.log('Navigating to:', page);
             
@@ -2269,7 +2304,6 @@
             if (page === 'familles') loadFamilles();
             if (page === 'import-export') loadImportExport();
 
-            // Fermer le menu après navigation
             closeMenu();
         }
 
@@ -2304,7 +2338,7 @@
                         <div class="location-info">
                             <div class="location-title">${fam.nom}</div>
                             <div class="location-count">${articleCount} article(s)</div>
-                            <div class="location-count">${fam.categories ? fam.categories.length : 0} catégorie(s)</div>
+                            <div class="location-count">${fam.categories.length} catégorie(s)</div>
                         </div>
                         <div class="location-actions">
                             <button class="icon-btn" onclick="event.stopPropagation(); deleteFamille('${fam.id}')">🗑️</button>
@@ -2321,7 +2355,6 @@
             document.getElementById('famille-modal-title').textContent = 'Nouvelle Famille';
             document.getElementById('edit-famille-nom').value = '';
             document.getElementById('categories-list').innerHTML = '';
-            document.getElementById('custom-fields-list').innerHTML = '';
             document.getElementById('add-famille-modal').classList.add('active');
         }
 
@@ -2337,23 +2370,27 @@
             categoriesList.innerHTML = '';
             
             if (famille.categories && famille.categories.length > 0) {
-                famille.categories.forEach(categorie => {
+                famille.categories.forEach(cat => {
+                    const catObj = typeof cat === 'string' ? { nom: cat, champs: [] } : cat;
+                    const champsSummary = catObj.champs && catObj.champs.length > 0 
+                        ? catObj.champs.map(c => `<span class="champ-badge">${c.label}</span>`).join('')
+                        : '<span style="color:#666;">Aucun champ</span>';
+                    
                     const categoryHtml = `
                         <div class="category-item">
-                            <div class="category-name">${categorie}</div>
-                            <button type="button" class="icon-btn" onclick="removeCategoryFromFamille('${categorie}')">🗑️</button>
+                            <div class="category-info">
+                                <div class="category-name">${catObj.nom}</div>
+                                <div class="category-champs-summary">
+                                    ${champsSummary}
+                                </div>
+                            </div>
+                            <div class="category-actions">
+                                <button type="button" class="category-config-btn" onclick="event.stopPropagation(); showCategorieChampsModal('${famille.id}', '${catObj.nom}')">⚙️</button>
+                                <button type="button" class="icon-btn" onclick="removeCategoryFromFamille('${catObj.nom}')">🗑️</button>
+                            </div>
                         </div>
                     `;
                     categoriesList.innerHTML += categoryHtml;
-                });
-            }
-            
-            const customFieldsList = document.getElementById('custom-fields-list');
-            customFieldsList.innerHTML = '';
-            
-            if (famille.champsPersonnalises && famille.champsPersonnalises.length > 0) {
-                famille.champsPersonnalises.sort((a, b) => a.ordre - b.ordre).forEach(champ => {
-                    addCustomField(champ);
                 });
             }
             
@@ -2380,8 +2417,16 @@
             
             const categoryHtml = `
                 <div class="category-item">
-                    <div class="category-name">${categorie}</div>
-                    <button type="button" class="icon-btn" onclick="removeCategoryFromFamille('${categorie}')">🗑️</button>
+                    <div class="category-info">
+                        <div class="category-name">${categorie}</div>
+                        <div class="category-champs-summary">
+                            <span style="color:#666;">Aucun champ</span>
+                        </div>
+                    </div>
+                    <div class="category-actions">
+                        <button type="button" class="category-config-btn" onclick="event.stopPropagation(); showCategorieChampsModal('${currentFamilleId}', '${categorie}')">⚙️</button>
+                        <button type="button" class="icon-btn" onclick="removeCategoryFromFamille('${categorie}')">🗑️</button>
+                    </div>
                 </div>
             `;
             categoriesList.innerHTML += categoryHtml;
@@ -2402,8 +2447,38 @@
             });
         }
 
-        function addCustomField(champData = null) {
-            const customFieldsList = document.getElementById('custom-fields-list');
+        function showCategorieChampsModal(familleId, categorieNom) {
+            currentFamilleId = familleId;
+            currentCategorieNom = categorieNom;
+            
+            const famille = familles.find(f => f.id.toString() === familleId);
+            if (!famille) return;
+            
+            const categorie = famille.categories.find(c => c.nom === categorieNom);
+            if (!categorie) return;
+            
+            document.getElementById('current-famille-id').value = familleId;
+            document.getElementById('current-categorie-nom').value = categorieNom;
+            document.getElementById('categorie-champs-title').textContent = `Champs - ${famille.nom} / ${categorieNom}`;
+            
+            const champsList = document.getElementById('categorie-champs-list');
+            champsList.innerHTML = '';
+            
+            if (categorie.champs && categorie.champs.length > 0) {
+                categorie.champs.sort((a, b) => a.ordre - b.ordre).forEach(champ => {
+                    addCategorieChampElement(champ);
+                });
+            }
+            
+            document.getElementById('categorie-champs-modal').classList.add('active');
+        }
+
+        function addCategorieChamp(champData = null) {
+            addCategorieChampElement(champData);
+        }
+
+        function addCategorieChampElement(champData = null) {
+            const champsList = document.getElementById('categorie-champs-list');
             const fieldId = champData ? champData.id : Date.now() + Math.random();
             const fieldHtml = `
                 <div class="field-config-item" data-field-id="${fieldId}">
@@ -2416,7 +2491,7 @@
                         <div class="field-order-controls">
                             <button type="button" class="field-order-btn" onclick="moveFieldUp(this)">↑</button>
                             <button type="button" class="field-order-btn" onclick="moveFieldDown(this)">↓</button>
-                            <button type="button" class="icon-btn" onclick="removeCustomFieldElement(this)">🗑️</button>
+                            <button type="button" class="icon-btn" onclick="removeCategorieChampElement(this)">🗑️</button>
                         </div>
                     </div>
                     <div class="custom-field-required">
@@ -2425,10 +2500,10 @@
                     </div>
                 </div>
             `;
-            customFieldsList.innerHTML += fieldHtml;
+            champsList.innerHTML += fieldHtml;
         }
 
-        function removeCustomFieldElement(button) {
+        function removeCategorieChampElement(button) {
             button.closest('.field-config-item').remove();
         }
 
@@ -2448,6 +2523,45 @@
             }
         }
 
+        function saveCategorieChamps(event) {
+            event.preventDefault();
+            
+            const familleId = document.getElementById('current-famille-id').value;
+            const categorieNom = document.getElementById('current-categorie-nom').value;
+            
+            const famille = familles.find(f => f.id.toString() === familleId);
+            if (!famille) return;
+            
+            const categorie = famille.categories.find(c => c.nom === categorieNom);
+            if (!categorie) return;
+            
+            const fieldItems = document.querySelectorAll('#categorie-champs-list .field-config-item');
+            const champs = [];
+            
+            fieldItems.forEach((item, index) => {
+                const fieldId = item.dataset.fieldId;
+                const label = item.querySelector('input[type="text"]').value.trim().toUpperCase();
+                const type = item.querySelector('.field-type-select').value;
+                const obligatoire = item.querySelector('input[type="checkbox"]').checked;
+                
+                if (label) {
+                    champs.push({
+                        id: fieldId,
+                        label,
+                        type,
+                        obligatoire,
+                        ordre: index + 1
+                    });
+                }
+            });
+            
+            categorie.champs = champs;
+            
+            saveToStorage();
+            closeModal('categorie-champs-modal');
+            showEditFamilleModal(familleId);
+        }
+
         function saveFamille(event) {
             event.preventDefault();
             
@@ -2460,27 +2574,23 @@
             
             const categoriesList = document.getElementById('categories-list');
             const categoryElements = categoriesList.querySelectorAll('.category-item');
-            const categories = Array.from(categoryElements).map(item => 
-                item.querySelector('.category-name').textContent
-            );
+            const categories = [];
             
-            const fieldItems = document.querySelectorAll('.field-config-item');
-            const champsPersonnalises = [];
-            
-            fieldItems.forEach((item, index) => {
-                const fieldId = item.dataset.fieldId;
-                const label = item.querySelector('input[type="text"]').value.trim().toUpperCase();
-                const type = item.querySelector('.field-type-select').value;
-                const obligatoire = item.querySelector('input[type="checkbox"]').checked;
-                
-                if (label) {
-                    champsPersonnalises.push({
-                        id: fieldId,
-                        label,
-                        type,
-                        obligatoire,
-                        ordre: index + 1
-                    });
+            categoryElements.forEach(item => {
+                const nameElement = item.querySelector('.category-name');
+                if (nameElement) {
+                    const nomCat = nameElement.textContent;
+                    let champs = [];
+                    if (currentFamilleId) {
+                        const oldFamille = familles.find(f => f.id === currentFamilleId);
+                        if (oldFamille) {
+                            const oldCat = oldFamille.categories.find(c => c.nom === nomCat);
+                            if (oldCat && oldCat.champs) {
+                                champs = oldCat.champs;
+                            }
+                        }
+                    }
+                    categories.push({ nom: nomCat, champs });
                 }
             });
             
@@ -2489,14 +2599,12 @@
                 if (famille) {
                     famille.nom = nom;
                     famille.categories = categories;
-                    famille.champsPersonnalises = champsPersonnalises;
                 }
             } else {
                 const newFamille = {
                     id: Date.now(),
                     nom,
-                    categories,
-                    champsPersonnalises
+                    categories
                 };
                 familles.push(newFamille);
             }
@@ -2556,32 +2664,51 @@
             const familleId = document.getElementById('article-famille-select').value;
             const famille = familles.find(f => f.id.toString() === familleId);
             const categorieSelect = document.getElementById('article-categorie-select');
-            const customFieldsContainer = document.getElementById('article-custom-fields');
             
             document.getElementById('article-famille-display').value = famille ? famille.nom : '';
             
             categorieSelect.innerHTML = '<option value="">Sélectionnez une catégorie</option>';
             if (famille && famille.categories) {
                 famille.categories.forEach(cat => {
-                    categorieSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+                    const catObj = typeof cat === 'string' ? { nom: cat } : cat;
+                    categorieSelect.innerHTML += `<option value="${catObj.nom}">${catObj.nom}</option>`;
                 });
             }
             
-            customFieldsContainer.innerHTML = '';
-            if (famille && famille.champsPersonnalises) {
-                famille.champsPersonnalises.sort((a, b) => a.ordre - b.ordre).forEach(champ => {
-                    const fieldHtml = `
-                        <div class="form-group">
-                            <label class="form-label">${champ.label}${champ.obligatoire ? ' *' : ''}</label>
-                            ${champ.type === 'texte' ? 
-                                `<input type="text" class="form-input" id="custom-${champ.id}" ${champ.obligatoire ? 'required' : ''}>` :
-                                `<input type="number" class="form-input" id="custom-${champ.id}" ${champ.obligatoire ? 'required' : ''}>`
-                            }
-                        </div>
-                    `;
-                    customFieldsContainer.innerHTML += fieldHtml;
-                });
+            document.getElementById('article-custom-fields').innerHTML = '';
+        }
+
+        function onCategorieSelectChange() {
+            const familleId = document.getElementById('article-famille-select').value;
+            const categorieNom = document.getElementById('article-categorie-select').value;
+            
+            if (!familleId || !categorieNom) {
+                document.getElementById('article-custom-fields').innerHTML = '';
+                return;
             }
+            
+            const famille = familles.find(f => f.id.toString() === familleId);
+            if (!famille) return;
+            
+            const categorie = famille.categories.find(c => c.nom === categorieNom);
+            if (!categorie) return;
+            
+            const champs = categorie.champs || [];
+            const customFieldsContainer = document.getElementById('article-custom-fields');
+            customFieldsContainer.innerHTML = '';
+            
+            champs.sort((a, b) => a.ordre - b.ordre).forEach(champ => {
+                const fieldHtml = `
+                    <div class="form-group">
+                        <label class="form-label">${champ.label}${champ.obligatoire ? ' *' : ''}</label>
+                        ${champ.type === 'texte' ? 
+                            `<input type="text" class="form-input" id="custom-${champ.id}" ${champ.obligatoire ? 'required' : ''}>` :
+                            `<input type="number" class="form-input" id="custom-${champ.id}" ${champ.obligatoire ? 'required' : ''}>`
+                        }
+                    </div>
+                `;
+                customFieldsContainer.innerHTML += fieldHtml;
+            });
         }
 
         function saveArticle(event) {
@@ -2596,7 +2723,7 @@
             }
             
             const barcode = document.getElementById('article-barcode').value.trim();
-            const categorie = document.getElementById('article-categorie-select').value;
+            const categorieNom = document.getElementById('article-categorie-select').value;
             const name = document.getElementById('article-name').value.trim().toUpperCase();
             const fournisseur = document.getElementById('article-fournisseur').value.trim().toUpperCase();
             const reference = document.getElementById('article-reference').value.trim().toUpperCase();
@@ -2604,14 +2731,20 @@
             const locationId = document.getElementById('article-location').value;
             const nombre = parseInt(document.getElementById('article-nombre').value);
 
-            if (!categorie) {
+            if (!categorieNom) {
                 alert('Veuillez sélectionner une catégorie');
                 return;
             }
 
+            const categorie = famille.categories.find(c => c.nom === categorieNom);
+            if (!categorie) {
+                alert('Catégorie invalide');
+                return;
+            }
+
             const customValues = {};
-            if (famille && famille.champsPersonnalises) {
-                for (const champ of famille.champsPersonnalises) {
+            if (categorie.champs && categorie.champs.length > 0) {
+                for (const champ of categorie.champs) {
                     const input = document.getElementById(`custom-${champ.id}`);
                     if (input) {
                         const value = champ.type === 'nombre' ? parseFloat(input.value) || 0 : input.value.trim().toUpperCase();
@@ -2632,7 +2765,7 @@
                 existingArticle = articles.find(a => 
                     a.name.toLowerCase() === name.toLowerCase() &&
                     a.famille === famille.nom &&
-                    a.categorie === categorie
+                    a.categorie === categorieNom
                 );
             }
 
@@ -2655,7 +2788,7 @@
                     name,
                     barcode,
                     famille: famille.nom,
-                    categorie,
+                    categorie: categorieNom,
                     fournisseur,
                     reference,
                     seuil_bas,
@@ -2698,20 +2831,23 @@
             customFieldsContainer.innerHTML = '';
             
             const famille = familles.find(f => f.nom === article.famille);
-            if (famille && famille.champsPersonnalises) {
-                famille.champsPersonnalises.sort((a, b) => a.ordre - b.ordre).forEach(champ => {
-                    const value = article.customValues && article.customValues[champ.label] ? article.customValues[champ.label] : '';
-                    const fieldHtml = `
-                        <div class="form-group">
-                            <label class="form-label">${champ.label}${champ.obligatoire ? ' *' : ''}</label>
-                            ${champ.type === 'texte' ? 
-                                `<input type="text" class="form-input" id="edit-custom-${champ.id}" value="${value}" ${champ.obligatoire ? 'required' : ''}>` :
-                                `<input type="number" class="form-input" id="edit-custom-${champ.id}" value="${value}" ${champ.obligatoire ? 'required' : ''}>`
-                            }
-                        </div>
-                    `;
-                    customFieldsContainer.innerHTML += fieldHtml;
-                });
+            if (famille) {
+                const categorie = famille.categories.find(c => c.nom === article.categorie);
+                if (categorie && categorie.champs) {
+                    categorie.champs.sort((a, b) => a.ordre - b.ordre).forEach(champ => {
+                        const value = article.customValues && article.customValues[champ.label] ? article.customValues[champ.label] : '';
+                        const fieldHtml = `
+                            <div class="form-group">
+                                <label class="form-label">${champ.label}${champ.obligatoire ? ' *' : ''}</label>
+                                ${champ.type === 'texte' ? 
+                                    `<input type="text" class="form-input" id="edit-custom-${champ.id}" value="${value}" ${champ.obligatoire ? 'required' : ''}>` :
+                                    `<input type="number" class="form-input" id="edit-custom-${champ.id}" value="${value}" ${champ.obligatoire ? 'required' : ''}>`
+                                }
+                            </div>
+                        `;
+                        customFieldsContainer.innerHTML += fieldHtml;
+                    });
+                }
             }
             
             document.getElementById('edit-article-modal').classList.add('active');
@@ -2732,17 +2868,20 @@
             article.seuil_bas = parseInt(document.getElementById('edit-article-seuil-bas').value);
             
             const famille = familles.find(f => f.nom === article.famille);
-            if (famille && famille.champsPersonnalises) {
-                if (!article.customValues) article.customValues = {};
-                for (const champ of famille.champsPersonnalises) {
-                    const input = document.getElementById(`edit-custom-${champ.id}`);
-                    if (input) {
-                        const value = champ.type === 'nombre' ? parseFloat(input.value) || 0 : input.value.trim().toUpperCase();
-                        if (champ.obligatoire && !value && value !== 0) {
-                            alert(`Le champ "${champ.label}" est obligatoire`);
-                            return;
+            if (famille) {
+                const categorie = famille.categories.find(c => c.nom === article.categorie);
+                if (categorie && categorie.champs) {
+                    if (!article.customValues) article.customValues = {};
+                    for (const champ of categorie.champs) {
+                        const input = document.getElementById(`edit-custom-${champ.id}`);
+                        if (input) {
+                            const value = champ.type === 'nombre' ? parseFloat(input.value) || 0 : input.value.trim().toUpperCase();
+                            if (champ.obligatoire && !value && value !== 0) {
+                                alert(`Le champ "${champ.label}" est obligatoire`);
+                                return;
+                            }
+                            article.customValues[champ.label] = value;
                         }
-                        article.customValues[champ.label] = value;
                     }
                 }
             }
@@ -2756,7 +2895,6 @@
             loadDashboard();
         }
 
-        // Affichage des détails d'article
         function showArticleDetail(articleId) {
             currentArticleId = articleId;
             const article = articles.find(a => a.id.toString() === articleId);
@@ -3219,7 +3357,7 @@
             navigateTo('scan');
         }
 
-        // Fonctions de recherche avancée
+        // Recherche avancée
         function loadSearchPage() {
             loadFilterDropdowns();
             document.getElementById('advanced-search-input').value = '';
@@ -3371,7 +3509,7 @@
             document.getElementById('search-results').innerHTML = resultsHtml;
         }
 
-        // Fonctions d'import/export
+        // ===== IMPORT/EXPORT =====
         function loadImportExport() {
             const familleSelects = ['barcode-famille-filter', 'excel-famille-filter'];
             
@@ -3506,6 +3644,7 @@
             }
         }
 
+        // NOUVELLE VERSION DE LA FONCTION D'EXPORT
         async function exportSingleFamilyExcel(famille) {
             try {
                 const filteredArticles = famille === 'Sans famille' 
@@ -3540,26 +3679,54 @@
                     right: { style: 'thin', color: { argb: 'FF000000' } }
                 };
                 
+                const familleObj = familles.find(f => f.nom === famille);
+                
                 Object.keys(groupedByCategory).sort().forEach(categorie => {
                     const categoryArticles = groupedByCategory[categorie];
                     
                     const worksheet = workbook.addWorksheet(categorie.substring(0, 31).toUpperCase());
                     
-                    const familleData = familles.find(f => f.nom === famille);
-                    const customFields = familleData ? (familleData.champsPersonnalises || []) : [];
+                    // Récupérer les champs de cette catégorie
+                    let customFields = [];
+                    if (familleObj) {
+                        const catObj = familleObj.categories.find(c => c.nom === categorie);
+                        if (catObj && catObj.champs) {
+                            customFields = catObj.champs.sort((a, b) => a.ordre - b.ordre);
+                        }
+                    }
                     
-                    const headers = ['NOM', 'CATÉGORIE', 'CODE-BARRE', 'FOURNISSEUR', 'RÉFÉRENCE', 'SEUIL BAS'];
+                    // Recherche d'un champ "conditionnement" ou "cdt" (insensible à la casse)
+                    const conditionnementField = customFields.find(champ => 
+                        champ.label.includes('CONDITIONNEMENT') || champ.label.includes('CDT')
+                    );
                     
-                    customFields.sort((a, b) => a.ordre - b.ordre).forEach(champ => {
-                        headers.push(champ.label.toUpperCase());
+                    // Construction des en-têtes
+                    const headers = ['NOM'];
+                    
+                    // Ajouter les champs personnalisés
+                    customFields.forEach(champ => {
+                        headers.push(champ.label);
                     });
                     
+                    // Ajouter une colonne masquée pour le seuil bas (nécessaire pour la mise en forme)
+                    headers.push('SEUIL BAS (caché)');
+                    
+                    // Ajouter Fournisseur et Référence (en dernière position avant les emplacements)
+                    headers.push('FOURNISSEUR', 'RÉFÉRENCE');
+                    
+                    // Ajouter les emplacements
                     const sortedLocations = [...locations].sort((a, b) => a.name.localeCompare(b.name));
                     sortedLocations.forEach(loc => {
-                        headers.push(loc.name.toUpperCase());
+                        headers.push(loc.name);
                     });
                     
+                    // Ajouter la colonne TOTAL
                     headers.push('TOTAL');
+                    
+                    // Ajouter la colonne TOTAL UNITAIRE si conditionnement présent
+                    if (conditionnementField) {
+                        headers.push('TOTAL UNITAIRE');
+                    }
                     
                     const headerRow = worksheet.addRow(headers);
                     headerRow.eachCell((cell) => {
@@ -3569,89 +3736,103 @@
                         cell.border = borderStyle;
                     });
                     
-                    let currentRow = 2;
-                    let previousNom = '';
+                    // Masquer la colonne du seuil bas (largeur 0)
+                    const seuilBasColIndex = 2 + customFields.length; // 1 (NOM) + nb champs
+                    worksheet.getColumn(seuilBasColIndex).width = 0;
                     
-                    categoryArticles.sort((a, b) => a.name.localeCompare(b.name)).forEach((art) => {
+                    // Préparer les indices de colonnes pour les formules
+                    const debutLocations = customFields.length + 5; // car: col1: NOM, puis champs, puis seuil, puis fourn, puis réf, puis premier lieu
+                    const finLocations = debutLocations + sortedLocations.length - 1;
+                    const colTotal = finLocations + 1; // après les emplacements
+                    
+                    categoryArticles.sort((a, b) => a.name.localeCompare(b.name)).forEach((art, rowIndex) => {
                         const row = [];
                         
-                        if (previousNom !== art.name.toUpperCase() && previousNom !== '') {
-                            worksheet.addRow([]);
-                            currentRow++;
-                        }
-                        previousNom = art.name.toUpperCase();
+                        // NOM
+                        row.push(art.name);
                         
-                        row.push(art.name.toUpperCase());
-                        row.push(art.categorie || '');
-                        row.push(art.barcode || '');
-                        row.push(art.fournisseur || '');
-                        row.push(art.reference || '');
-                        row.push(art.seuil_bas || 0);
-                        
-                        customFields.sort((a, b) => a.ordre - b.ordre).forEach(champ => {
+                        // Champs personnalisés dans l'ordre
+                        customFields.forEach(champ => {
                             const value = art.customValues && art.customValues[champ.label] ? art.customValues[champ.label] : '';
                             row.push(value);
                         });
                         
-                        let totalQuantity = 0;
+                        // SEUIL BAS (masqué)
+                        row.push(art.seuil_bas || 0);
+                        
+                        // FOURNISSEUR
+                        row.push(art.fournisseur || '');
+                        
+                        // RÉFÉRENCE
+                        row.push(art.reference || '');
+                        
+                        // Quantités par emplacement
                         sortedLocations.forEach(loc => {
                             const qty = art.quantities && art.quantities[loc.id] ? art.quantities[loc.id].nombre : 0;
                             row.push(qty > 0 ? qty : '');
-                            totalQuantity += qty;
                         });
                         
-                        row.push(totalQuantity);
+                        // TOTAL : on mettra une formule
+                        row.push(''); // temporaire, remplacé par formule
+                        
+                        // TOTAL UNITAIRE (si conditionnement)
+                        if (conditionnementField) {
+                            row.push(''); // temporaire, remplacé par formule
+                        }
                         
                         const excelRow = worksheet.addRow(row);
                         
-                        excelRow.eachCell((cell, colNumber) => {
+                        // Appliquer les bordures
+                        excelRow.eachCell((cell) => {
                             cell.border = borderStyle;
-                            
-                            if (colNumber === headers.length && cell.value && typeof cell.value === 'number') {
-                                const totalQuantity = cell.value;
-                                const seuilBasCol = 6;
-                                const seuilBas = excelRow.getCell(seuilBasCol).value || 0;
-                                if (totalQuantity <= seuilBas && totalQuantity > 0) {
-                                    cell.font = { bold: true, color: { argb: 'FFFF9800' } };
-                                } else if (totalQuantity === 0) {
-                                    cell.font = { bold: true, color: { argb: 'FFCF6679' } };
-                                }
-                            }
-                            
-                            if (colNumber <= 6 + customFields.length) {
-                                cell.alignment = { vertical: 'middle', horizontal: 'left' };
-                            } else {
-                                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                                if (cell.value && typeof cell.value === 'number' && cell.value > 0) {
-                                    cell.font = { bold: true };
-                                }
-                            }
                         });
                         
-                        currentRow++;
+                        // Définir la formule pour TOTAL
+                        const totalCell = excelRow.getCell(colTotal);
+                        const plageLocations = worksheet.getCell(excelRow.number, debutLocations).address + ':' + worksheet.getCell(excelRow.number, finLocations).address;
+                        totalCell.value = { formula: `SUM(${plageLocations})` };
+                        
+                        // Si conditionnement, définir la formule pour TOTAL UNITAIRE
+                        if (conditionnementField) {
+                            const totalUnitaireCell = excelRow.getCell(colTotal + 1);
+                            // Trouver la colonne du conditionnement
+                            const conditionnementIndex = customFields.findIndex(champ => champ === conditionnementField) + 2; // +2 car NOM en col1
+                            const conditionnementCell = worksheet.getCell(excelRow.number, conditionnementIndex).address;
+                            totalUnitaireCell.value = { formula: `${totalCell.address} * ${conditionnementCell}` };
+                        }
+                        
+                        // Mise en forme conditionnelle : on ne peut pas la définir directement par cellule, on va utiliser des règles sur la colonne
+                        // On appliquera après avoir ajouté toutes les lignes
                     });
                     
+                    // Appliquer une mise en forme conditionnelle sur la colonne TOTAL
+                    const totalColumn = worksheet.getColumn(colTotal);
+                    // Règle pour stock faible (orange) : si TOTAL <= SEUIL BAS et TOTAL > 0
+                    // La colonne seuil bas est à l'indice seuilBasColIndex
+                    // Malheureusement, ExcelJS ne supporte pas les formules conditionnelles avec référence à d'autres cellules facilement.
+                    // On va plutôt colorer les cellules individuellement après avoir calculé la formule.
+                    // Pour simplifier, on ne met pas de mise en forme conditionnelle automatique.
+                    // On peut le faire en parcourant les lignes et en appliquant un style en fonction de la valeur.
+                    // Mais comme les formules sont dynamiques, on ne peut pas le faire à la génération.
+                    // On laisse Excel calculer les formules et l'utilisateur pourra appliquer une MFC s'il le souhaite.
+                    
+                    // Ajuster les largeurs de colonnes
                     const columnWidths = [
-                        { width: 30 },
-                        { width: 20 },
-                        { width: 20 },
-                        { width: 20 },
-                        { width: 20 },
-                        { width: 12 },
+                        { width: 30 }, // NOM
+                        ...customFields.map(() => ({ width: 15 })),
+                        { width: 0 }, // SEUIL BAS masqué
+                        { width: 20 }, // FOURNISSEUR
+                        { width: 20 }, // RÉFÉRENCE
+                        ...sortedLocations.map(() => ({ width: 12 })),
+                        { width: 12 }, // TOTAL
                     ];
-                    
-                    customFields.forEach(() => {
-                        columnWidths.push({ width: 15 });
-                    });
-                    
-                    sortedLocations.forEach(() => {
-                        columnWidths.push({ width: 12 });
-                    });
-                    
-                    columnWidths.push({ width: 12 });
+                    if (conditionnementField) {
+                        columnWidths.push({ width: 15 }); // TOTAL UNITAIRE
+                    }
                     
                     worksheet.columns = columnWidths;
                     
+                    // Figer la première ligne
                     worksheet.views = [{ state: 'frozen', ySplit: 1 }];
                 });
                 
@@ -3697,56 +3878,69 @@
                             headers[colNumber] = cell.text;
                         });
                         
+                        const categorieNom = worksheet.name;
+                        
                         worksheet.eachRow((row, rowNumber) => {
                             if (rowNumber === 1) return;
                             
                             const name = row.getCell(1).text;
                             if (!name) return;
                             
-                            const categorie = row.getCell(2).text || '';
-                            const barcode = row.getCell(3).text || '';
-                            const fournisseur = row.getCell(4).text || '';
-                            const reference = row.getCell(5).text || '';
-                            const seuil_bas = parseInt(row.getCell(6).text) || 0;
-                            
-                            let article = articles.find(a => a.name === name && a.categorie === categorie);
-                            
-                            const customValues = {};
-                            for (let i = 7; i <= headers.length - locations.length - 1; i++) {
-                                const header = headers[i];
-                                if (header) {
-                                    customValues[header] = row.getCell(i).text || '';
+                            // Déterminer la famille à partir de la catégorie
+                            let familleNom = 'Sans famille';
+                            for (let f of familles) {
+                                const cat = f.categories.find(c => c.nom === categorieNom);
+                                if (cat) {
+                                    familleNom = f.nom;
+                                    break;
                                 }
                             }
                             
+                            let article = articles.find(a => a.name === name && a.categorie === categorieNom);
+                            
+                            // Récupérer les champs personnalisés
+                            const famille = familles.find(f => f.nom === familleNom);
+                            const catObj = famille ? famille.categories.find(c => c.nom === categorieNom) : null;
+                            const customValues = {};
+                            if (catObj && catObj.champs) {
+                                for (let i = 0; i < catObj.champs.length; i++) {
+                                    const colIndex = 2 + i; // après la colonne NOM
+                                    const champLabel = catObj.champs[i].label;
+                                    customValues[champLabel] = row.getCell(colIndex).text || '';
+                                }
+                            }
+                            
+                            // Fournisseur et Référence : ils se trouvent après les champs et le seuil bas masqué
+                            const fournisseurIndex = 2 + (catObj ? catObj.champs.length : 0) + 1; // +1 pour seuil bas
+                            const referenceIndex = fournisseurIndex + 1;
+                            const fournisseur = row.getCell(fournisseurIndex).text || '';
+                            const reference = row.getCell(referenceIndex).text || '';
+                            
                             if (!article) {
-                                const famille = familles.find(f => f.nom === sheet.name)?.nom || 'Sans famille';
-                                
                                 article = {
                                     id: Date.now() + Math.random(),
                                     name,
-                                    barcode,
-                                    famille,
-                                    categorie,
+                                    barcode: '',
+                                    famille: familleNom,
+                                    categorie: categorieNom,
                                     fournisseur,
                                     reference,
-                                    seuil_bas,
+                                    seuil_bas: 0,
                                     customValues,
                                     quantities: {},
                                     createdAt: new Date().toISOString()
                                 };
                                 articles.push(article);
                             } else {
-                                article.barcode = barcode || article.barcode;
                                 article.fournisseur = fournisseur || article.fournisseur;
                                 article.reference = reference || article.reference;
-                                article.seuil_bas = seuil_bas;
                                 article.customValues = { ...article.customValues, ...customValues };
                             }
                             
-                            const startCol = headers.length - locations.length;
+                            // Lire les quantités par emplacement
+                            const debutLocations = referenceIndex + 1;
                             for (let i = 0; i < locations.length; i++) {
-                                const colIndex = startCol + i;
+                                const colIndex = debutLocations + i;
                                 const locName = headers[colIndex];
                                 const location = locations.find(l => l.name === locName);
                                 
@@ -3827,7 +4021,7 @@
             input.click();
         }
 
-        // Fonctions scanner
+        // ===== FONCTIONS SCANNER =====
         async function startScanner() {
             console.log('Démarrage du scanner...');
             
@@ -3945,7 +4139,7 @@
             handleScannedBarcode(scannedBarcode);
         }
 
-        // Fonctions utilitaires
+        // ===== FONCTIONS UTILITAIRES =====
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
             document.querySelectorAll(`#${modalId} form`).forEach(form => form.reset());
@@ -3983,7 +4177,7 @@
             return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
         }
 
-        // Initialisation
+        // ===== INITIALISATION =====
         document.addEventListener('DOMContentLoaded', function() {
             document.addEventListener('input', function(event) {
                 if (event.target.matches('input[type="text"], input[type="search"], textarea')) {
@@ -4006,7 +4200,7 @@
             loadDashboard();
         });
 
-        // Service Worker
+        // ===== SERVICE WORKER =====
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(registration) {
