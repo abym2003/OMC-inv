@@ -35,7 +35,7 @@
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     
     <style>
-        /* Styles identiques à la version précédente - conservés pour la lisibilité */
+        /* Styles complets (repris du fichier original) */
         * {
             margin: 0;
             padding: 0;
@@ -1583,6 +1583,13 @@
             font-size: 13px;
             color: #aaa;
         }
+		
+		.article-extra-fields {
+    font-size: 13px;
+    color: #03dac6;
+    font-weight: 400;
+    margin-left: 8px;
+}
     </style>
 </head>
 <body>
@@ -3007,68 +3014,140 @@
             document.getElementById('detail-container').innerHTML = detailHtml;
         }
 
+        // Affichage des articles avec tri alphabétique
         function displayArticles(filtered) {
-            const listHtml = filtered.map(art => {
-                const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
-                const locs = Object.entries(art.quantities || {}).filter(([_, q]) => q.nombre > 0);
+    const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    
+    const listHtml = sorted.map(art => {
+        const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
+        const locs = Object.entries(art.quantities || {}).filter(([_, q]) => q.nombre > 0);
+        
+        const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
+        const isVeryLowStock = totalQty === 0;
+        
+        // Récupérer les champs à afficher entre NOM et CDT (ou NOM et FOURNISSEUR)
+        let extraFields = '';
+        const famille = familles.find(f => f.nom === art.famille);
+        if (famille) {
+            const categorie = famille.categories.find(c => c.nom === art.categorie);
+            if (categorie && categorie.champs && categorie.champs.length > 0) {
+                const champsTriés = [...categorie.champs].sort((a, b) => a.ordre - b.ordre);
                 
-                const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
-                const isVeryLowStock = totalQty === 0;
+                // Trouver l'index du champ CDT, sinon FOURNISSEUR est la limite
+                const indexCDT = champsTriés.findIndex(c =>
+                    c.label === 'CDT' || c.label.includes('CONDITIONNEMENT')
+                );
                 
-                return `
-                    <div class="article-card" onclick="showArticleDetail('${art.id}')">
-                        <div class="article-header">
-                            <div>
-                                <div class="article-name">
-                                    ${art.name}
-                                    ${isLowStock ? '<span class="stock-low-indicator" title="Stock faible"></span>' : ''}
-                                    ${isVeryLowStock ? '<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>' : ''}
-                                </div>
-                                ${art.famille ? `<div class="article-meta">📁 ${art.famille} / ${art.categorie}</div>` : ''}
-                            </div>
-                            <div class="article-quantity">${totalQty}</div>
-                        </div>
-                        <div class="article-locations">
-                            ${locs.map(([locId, qty]) => {
-                                const loc = locations.find(l => l.id.toString() === locId);
-                                return loc ? `<span class="location-badge">${loc.name}: ${qty.nombre}</span>` : '';
-                            }).join('')}
-                        </div>
-                    </div>
-                `;
-            }).join('') || '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Aucun article trouvé</div></div>';
-
-            document.getElementById('article-list').innerHTML = listHtml;
+                // Prendre les champs avant CDT (ou tous si CDT absent)
+                const champsAvantCDT = indexCDT > 0
+                    ? champsTriés.slice(0, indexCDT)
+                    : champsTriés;
+                
+                const parts = champsAvantCDT
+                    .map(champ => art.customValues && art.customValues[champ.label]
+                        ? art.customValues[champ.label]
+                        : null)
+                    .filter(Boolean);
+                
+                if (parts.length > 0) {
+                    extraFields = `<span class="article-extra-fields">${parts.join(' · ')}</span>`;
+                }
+            }
         }
+        
+        return `
+            <div class="article-card" onclick="showArticleDetail('${art.id}')">
+                <div class="article-header">
+                    <div>
+                        <div class="article-name">
+                            ${art.name}
+                            ${extraFields}
+                            ${isLowStock ? '<span class="stock-low-indicator" title="Stock faible"></span>' : ''}
+                            ${isVeryLowStock ? '<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>' : ''}
+                        </div>
+                        ${art.famille ? `<div class="article-meta">📁 ${art.famille} / ${art.categorie}</div>` : ''}
+                    </div>
+                    <div class="article-quantity">${totalQty}</div>
+                </div>
+                <div class="article-locations">
+                    ${locs.map(([locId, qty]) => {
+                        const loc = locations.find(l => l.id.toString() === locId);
+                        return loc ? `<span class="location-badge">${loc.name}: ${qty.nombre}</span>` : '';
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('') || '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Aucun article trouvé</div></div>';
+
+    document.getElementById('article-list').innerHTML = listHtml;
+}
 
         function loadInventory() {
-            const locationFilters = document.getElementById('location-filters');
-            const uniqueLocations = [...new Set(articles.flatMap(art => 
-                Object.keys(art.quantities || {})
-            ))].map(id => locations.find(l => l.id.toString() === id)).filter(Boolean);
-            
-            locationFilters.innerHTML = '<div class="filter-chip active" data-filter="all" onclick="filterByLocation(\'all\')">Tous</div>' +
-                uniqueLocations.map(loc => 
-                    `<div class="filter-chip" data-filter="${loc.id}" onclick="filterByLocation('${loc.id}')">${loc.name}</div>`
-                ).join('');
-            
-            displayArticles(articles);
+    const locationFilters = document.getElementById('location-filters');
+    const uniqueLocations = [...new Set(articles.flatMap(art => 
+        Object.keys(art.quantities || {})
+    ))].map(id => locations.find(l => l.id.toString() === id)).filter(Boolean);
+    
+    locationFilters.innerHTML = '<div class="filter-chip active" data-filter="all" onclick="filterByLocation(\'all\')">Tous</div>' +
+        uniqueLocations.map(loc => 
+            `<div class="filter-chip" data-filter="${loc.id}" onclick="filterByLocation('${loc.id}')">${loc.name}</div>`
+        ).join('');
+    
+    // Brancher la barre de recherche
+    const searchInput = document.getElementById('search-input');
+    searchInput.value = '';
+    searchInput.oninput = function() {
+        const term = this.value.toLowerCase();
+        const activeFilter = document.querySelector('#location-filters .filter-chip.active')?.dataset.filter || 'all';
+        
+        let filtered = activeFilter === 'all'
+            ? articles
+            : articles.filter(art => art.quantities && art.quantities[activeFilter]);
+        
+        if (term) {
+            filtered = filtered.filter(art =>
+                art.name.toLowerCase().includes(term) ||
+                (art.famille && art.famille.toLowerCase().includes(term)) ||
+                (art.categorie && art.categorie.toLowerCase().includes(term)) ||
+                (art.fournisseur && art.fournisseur.toLowerCase().includes(term)) ||
+                (art.reference && art.reference.toLowerCase().includes(term)) ||
+                (art.barcode && art.barcode.toLowerCase().includes(term))
+            );
         }
+        
+        displayArticles(filtered);
+    };
+    
+    displayArticles(articles);
+}
 
         function filterByLocation(locationId) {
-            document.querySelectorAll('#location-filters .filter-chip').forEach(chip => {
-                chip.classList.remove('active');
-                if (chip.dataset.filter === locationId || (locationId === 'all' && chip.dataset.filter === 'all')) {
-                    chip.classList.add('active');
-                }
-            });
-            
-            const filtered = locationId === 'all' 
-                ? articles 
-                : articles.filter(art => art.quantities && art.quantities[locationId]);
-            
-            displayArticles(filtered);
+    document.querySelectorAll('#location-filters .filter-chip').forEach(chip => {
+        chip.classList.remove('active');
+        if (chip.dataset.filter === locationId || (locationId === 'all' && chip.dataset.filter === 'all')) {
+            chip.classList.add('active');
         }
+    });
+    
+    const term = document.getElementById('search-input').value.toLowerCase();
+    
+    let filtered = locationId === 'all'
+        ? articles
+        : articles.filter(art => art.quantities && art.quantities[locationId]);
+    
+    if (term) {
+        filtered = filtered.filter(art =>
+            art.name.toLowerCase().includes(term) ||
+            (art.famille && art.famille.toLowerCase().includes(term)) ||
+            (art.categorie && art.categorie.toLowerCase().includes(term)) ||
+            (art.fournisseur && art.fournisseur.toLowerCase().includes(term)) ||
+            (art.reference && art.reference.toLowerCase().includes(term)) ||
+            (art.barcode && art.barcode.toLowerCase().includes(term))
+        );
+    }
+    
+    displayArticles(filtered);
+}
 
         function loadLocations() {
             const listHtml = locations.map(loc => {
@@ -3095,37 +3174,82 @@
         }
 
         function showLocationArticles(locationId) {
-            const location = locations.find(l => l.id.toString() === locationId);
-            if (!location) return;
-            
-            const locationArticles = articles.filter(art => 
-                art.quantities && art.quantities[locationId] && art.quantities[locationId].nombre > 0
-            );
-            
-            const articlesHtml = locationArticles.map(art => `
-                <div class="article-card" onclick="showArticleDetail('${art.id}')">
-                    <div class="article-header">
-                        <div class="article-name">${art.name}</div>
-                        <div class="article-quantity">${art.quantities[locationId].nombre}</div>
-                    </div>
-                    ${art.famille ? `<div class="article-meta">${art.famille} / ${art.categorie}</div>` : ''}
-                </div>
-            `).join('') || '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Aucun article dans cet emplacement</div></div>';
-            
-            document.getElementById('detail-container').innerHTML = `
-                <div class="detail-header">
-                    <div class="detail-title">📍 ${location.name}</div>
-                    ${location.description ? `<div class="detail-code">${location.description}</div>` : ''}
-                </div>
-                <div class="detail-section">
-                    <div class="section-title">Articles dans cet emplacement</div>
-                    <div class="article-list">${articlesHtml}</div>
-                </div>
-                <button class="btn-secondary" onclick="navigateTo('locations')">← Retour aux emplacements</button>
-            `;
-            
-            navigateTo('detail');
+    const location = locations.find(l => l.id.toString() === locationId);
+    if (!location) return;
+    
+    const locationArticles = articles.filter(art => 
+        art.quantities && art.quantities[locationId] && art.quantities[locationId].nombre > 0
+    );
+    
+    // Tri alphabétique
+    const sorted = [...locationArticles].sort((a, b) => a.name.localeCompare(b.name));
+    
+    const articlesHtml = sorted.map(art => {
+        const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
+        
+        const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
+        const isVeryLowStock = totalQty === 0;
+        
+        // Récupérer les champs à afficher entre NOM et CDT (ou NOM et FOURNISSEUR)
+        let extraFields = '';
+        const famille = familles.find(f => f.nom === art.famille);
+        if (famille) {
+            const categorie = famille.categories.find(c => c.nom === art.categorie);
+            if (categorie && categorie.champs && categorie.champs.length > 0) {
+                const champsTriés = [...categorie.champs].sort((a, b) => a.ordre - b.ordre);
+                
+                const indexCDT = champsTriés.findIndex(c =>
+                    c.label === 'CDT' || c.label.includes('CONDITIONNEMENT')
+                );
+                
+                const champsAvantCDT = indexCDT > 0
+                    ? champsTriés.slice(0, indexCDT)
+                    : champsTriés;
+                
+                const parts = champsAvantCDT
+                    .map(champ => art.customValues && art.customValues[champ.label]
+                        ? art.customValues[champ.label]
+                        : null)
+                    .filter(Boolean);
+                
+                if (parts.length > 0) {
+                    extraFields = `<span class="article-extra-fields">${parts.join(' · ')}</span>`;
+                }
+            }
         }
+        
+        return `
+            <div class="article-card" onclick="showArticleDetail('${art.id}')">
+                <div class="article-header">
+                    <div>
+                        <div class="article-name">
+                            ${art.name}
+                            ${extraFields}
+                            ${isLowStock ? '<span class="stock-low-indicator" title="Stock faible"></span>' : ''}
+                            ${isVeryLowStock ? '<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>' : ''}
+                        </div>
+                        ${art.famille ? `<div class="article-meta">${art.famille} / ${art.categorie}</div>` : ''}
+                    </div>
+                    <div class="article-quantity">${art.quantities[locationId].nombre}</div>
+                </div>
+            </div>
+        `;
+    }).join('') || '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Aucun article dans cet emplacement</div></div>';
+    
+    document.getElementById('detail-container').innerHTML = `
+        <div class="detail-header">
+            <div class="detail-title">📍 ${location.name}</div>
+            ${location.description ? `<div class="detail-code">${location.description}</div>` : ''}
+        </div>
+        <div class="detail-section">
+            <div class="section-title">Articles dans cet emplacement</div>
+            <div class="article-list">${articlesHtml}</div>
+        </div>
+        <button class="btn-secondary" onclick="navigateTo('locations')">← Retour aux emplacements</button>
+    `;
+    
+    navigateTo('detail');
+}
 
         function showAddLocationModal() {
             document.getElementById('location-name').value = '';
@@ -3429,85 +3553,117 @@
         }
 
         function performSearch() {
-            const searchTerm = document.getElementById('advanced-search-input').value.toLowerCase();
-            
-            let filtered = articles;
-            
-            if (searchTerm) {
-                filtered = filtered.filter(art => 
-                    art.name.toLowerCase().includes(searchTerm) ||
-                    (art.barcode && art.barcode.toLowerCase().includes(searchTerm)) ||
-                    (art.famille && art.famille.toLowerCase().includes(searchTerm)) ||
-                    (art.categorie && art.categorie.toLowerCase().includes(searchTerm)) ||
-                    (art.fournisseur && art.fournisseur.toLowerCase().includes(searchTerm)) ||
-                    (art.reference && art.reference.toLowerCase().includes(searchTerm))
-                );
-            }
-            
-            if (currentFilters.location) {
-                filtered = filtered.filter(art => 
-                    art.quantities && art.quantities[currentFilters.location] && art.quantities[currentFilters.location].nombre > 0
-                );
-            }
-            
-            if (currentFilters.famille) {
-                filtered = filtered.filter(art => art.famille === currentFilters.famille);
-            }
-            
-            if (currentFilters.categorie) {
-                filtered = filtered.filter(art => art.categorie === currentFilters.categorie);
-            }
-            
-            if (currentFilters.fournisseur) {
-                filtered = filtered.filter(art => art.fournisseur === currentFilters.fournisseur);
-            }
-            
-            const activeFilter = document.querySelector('#search-page .filters .filter-chip.active')?.dataset.filter || 'all';
-            
-            if (activeFilter === 'low') {
-                filtered = filtered.filter(art => {
-                    const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
-                    return totalQty <= (art.seuil_bas || 0) && totalQty > 0;
-                });
-            } else if (activeFilter === 'zero') {
-                filtered = filtered.filter(art => {
-                    const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
-                    return totalQty === 0;
-                });
-            }
-            
-            const resultsHtml = filtered.map(art => {
-                const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
-                const locs = Object.entries(art.quantities || {}).filter(([_, q]) => q.nombre > 0);
+    const searchTerm = document.getElementById('advanced-search-input').value.toLowerCase();
+    
+    let filtered = articles;
+    
+    if (searchTerm) {
+        filtered = filtered.filter(art => 
+            art.name.toLowerCase().includes(searchTerm) ||
+            (art.barcode && art.barcode.toLowerCase().includes(searchTerm)) ||
+            (art.famille && art.famille.toLowerCase().includes(searchTerm)) ||
+            (art.categorie && art.categorie.toLowerCase().includes(searchTerm)) ||
+            (art.fournisseur && art.fournisseur.toLowerCase().includes(searchTerm)) ||
+            (art.reference && art.reference.toLowerCase().includes(searchTerm))
+        );
+    }
+    
+    if (currentFilters.location) {
+        filtered = filtered.filter(art => 
+            art.quantities && art.quantities[currentFilters.location] && art.quantities[currentFilters.location].nombre > 0
+        );
+    }
+    
+    if (currentFilters.famille) {
+        filtered = filtered.filter(art => art.famille === currentFilters.famille);
+    }
+    
+    if (currentFilters.categorie) {
+        filtered = filtered.filter(art => art.categorie === currentFilters.categorie);
+    }
+    
+    if (currentFilters.fournisseur) {
+        filtered = filtered.filter(art => art.fournisseur === currentFilters.fournisseur);
+    }
+    
+    const activeFilter = document.querySelector('#search-page .filters .filter-chip.active')?.dataset.filter || 'all';
+    
+    if (activeFilter === 'low') {
+        filtered = filtered.filter(art => {
+            const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
+            return totalQty <= (art.seuil_bas || 0) && totalQty > 0;
+        });
+    } else if (activeFilter === 'zero') {
+        filtered = filtered.filter(art => {
+            const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
+            return totalQty === 0;
+        });
+    }
+    
+    // Tri alphabétique
+    const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    
+    const resultsHtml = sorted.map(art => {
+        const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
+        const locs = Object.entries(art.quantities || {}).filter(([_, q]) => q.nombre > 0);
+        
+        const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
+        const isVeryLowStock = totalQty === 0;
+        
+        // Récupérer les champs à afficher entre NOM et CDT (ou NOM et FOURNISSEUR)
+        let extraFields = '';
+        const famille = familles.find(f => f.nom === art.famille);
+        if (famille) {
+            const categorie = famille.categories.find(c => c.nom === art.categorie);
+            if (categorie && categorie.champs && categorie.champs.length > 0) {
+                const champsTriés = [...categorie.champs].sort((a, b) => a.ordre - b.ordre);
                 
-                const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
-                const isVeryLowStock = totalQty === 0;
+                const indexCDT = champsTriés.findIndex(c =>
+                    c.label === 'CDT' || c.label.includes('CONDITIONNEMENT')
+                );
                 
-                return `
-                    <div class="article-card" onclick="showArticleDetail('${art.id}')">
-                        <div class="article-header">
-                            <div>
-                                <div class="article-name">
-                                    ${art.name}
-                                    ${isLowStock ? '<span class="stock-low-indicator" title="Stock faible"></span>' : ''}
-                                    ${isVeryLowStock ? '<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>' : ''}
-                                </div>
-                                ${art.famille ? `<div class="article-meta">📁 ${art.famille} / ${art.categorie}</div>` : ''}
-                            </div>
-                            <div class="article-quantity">${totalQty}</div>
-                        </div>
-                        <div class="article-locations">
-                            ${locs.map(([locId, qty]) => {
-                                const loc = locations.find(l => l.id.toString() === locId);
-                                return loc ? `<span class="location-badge">${loc.name}: ${qty.nombre}</span>` : '';
-                            }).join('')}
-                        </div>
-                    </div>
-                `;
-            }).join('') || '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Aucun article trouvé</div></div>';
-            
-            document.getElementById('search-results').innerHTML = resultsHtml;
+                const champsAvantCDT = indexCDT > 0
+                    ? champsTriés.slice(0, indexCDT)
+                    : champsTriés;
+                
+                const parts = champsAvantCDT
+                    .map(champ => art.customValues && art.customValues[champ.label]
+                        ? art.customValues[champ.label]
+                        : null)
+                    .filter(Boolean);
+                
+                if (parts.length > 0) {
+                    extraFields = `<span class="article-extra-fields">${parts.join(' · ')}</span>`;
+                }
+            }
         }
+        
+        return `
+            <div class="article-card" onclick="showArticleDetail('${art.id}')">
+                <div class="article-header">
+                    <div>
+                        <div class="article-name">
+                            ${art.name}
+                            ${extraFields}
+                            ${isLowStock ? '<span class="stock-low-indicator" title="Stock faible"></span>' : ''}
+                            ${isVeryLowStock ? '<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>' : ''}
+                        </div>
+                        ${art.famille ? `<div class="article-meta">📁 ${art.famille} / ${art.categorie}</div>` : ''}
+                    </div>
+                    <div class="article-quantity">${totalQty}</div>
+                </div>
+                <div class="article-locations">
+                    ${locs.map(([locId, qty]) => {
+                        const loc = locations.find(l => l.id.toString() === locId);
+                        return loc ? `<span class="location-badge">${loc.name}: ${qty.nombre}</span>` : '';
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('') || '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Aucun article trouvé</div></div>';
+    
+    document.getElementById('search-results').innerHTML = resultsHtml;
+}
 
         // ===== IMPORT/EXPORT =====
         function loadImportExport() {
@@ -3644,335 +3800,500 @@
             }
         }
 
-        // NOUVELLE VERSION DE LA FONCTION D'EXPORT
         async function exportSingleFamilyExcel(famille) {
-            try {
-                const filteredArticles = famille === 'Sans famille' 
-                    ? articles.filter(art => !art.famille || art.famille.trim() === '')
-                    : articles.filter(art => art.famille === famille);
-                
-                if (filteredArticles.length === 0) {
-                    alert(`Aucun article dans la famille "${famille}"`);
-                    return 0;
-                }
-                
-                const groupedByCategory = {};
-                
-                filteredArticles.forEach(art => {
-                    const categorie = art.categorie || 'Sans catégorie';
-                    
-                    if (!groupedByCategory[categorie]) {
-                        groupedByCategory[categorie] = [];
-                    }
-                    
-                    groupedByCategory[categorie].push(art);
-                });
-                
-                const workbook = new ExcelJS.Workbook();
-                workbook.creator = 'Gestion Inventaire';
-                workbook.created = new Date();
-                
-                const borderStyle = {
-                    top: { style: 'thin', color: { argb: 'FF000000' } },
-                    left: { style: 'thin', color: { argb: 'FF000000' } },
-                    bottom: { style: 'thin', color: { argb: 'FF000000' } },
-                    right: { style: 'thin', color: { argb: 'FF000000' } }
-                };
-                
-                const familleObj = familles.find(f => f.nom === famille);
-                
-                Object.keys(groupedByCategory).sort().forEach(categorie => {
-                    const categoryArticles = groupedByCategory[categorie];
-                    
-                    const worksheet = workbook.addWorksheet(categorie.substring(0, 31).toUpperCase());
-                    
-                    // Récupérer les champs de cette catégorie
-                    let customFields = [];
-                    if (familleObj) {
-                        const catObj = familleObj.categories.find(c => c.nom === categorie);
-                        if (catObj && catObj.champs) {
-                            customFields = catObj.champs.sort((a, b) => a.ordre - b.ordre);
-                        }
-                    }
-                    
-                    // Recherche d'un champ "conditionnement" ou "cdt" (insensible à la casse)
-                    const conditionnementField = customFields.find(champ => 
-                        champ.label.includes('CONDITIONNEMENT') || champ.label.includes('CDT')
-                    );
-                    
-                    // Construction des en-têtes
-                    const headers = ['NOM'];
-                    
-                    // Ajouter les champs personnalisés
-                    customFields.forEach(champ => {
-                        headers.push(champ.label);
-                    });
-                    
-                    // Ajouter une colonne masquée pour le seuil bas (nécessaire pour la mise en forme)
-                    headers.push('SEUIL BAS (caché)');
-                    
-                    // Ajouter Fournisseur et Référence (en dernière position avant les emplacements)
-                    headers.push('FOURNISSEUR', 'RÉFÉRENCE');
-                    
-                    // Ajouter les emplacements
-                    const sortedLocations = [...locations].sort((a, b) => a.name.localeCompare(b.name));
-                    sortedLocations.forEach(loc => {
-                        headers.push(loc.name);
-                    });
-                    
-                    // Ajouter la colonne TOTAL
-                    headers.push('TOTAL');
-                    
-                    // Ajouter la colonne TOTAL UNITAIRE si conditionnement présent
-                    if (conditionnementField) {
-                        headers.push('TOTAL UNITAIRE');
-                    }
-                    
-                    const headerRow = worksheet.addRow(headers);
-                    headerRow.eachCell((cell) => {
-                        cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } };
-                        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-                        cell.border = borderStyle;
-                    });
-                    
-                    // Masquer la colonne du seuil bas (largeur 0)
-                    const seuilBasColIndex = 2 + customFields.length; // 1 (NOM) + nb champs
-                    worksheet.getColumn(seuilBasColIndex).width = 0;
-                    
-                    // Préparer les indices de colonnes pour les formules
-                    const debutLocations = customFields.length + 5; // car: col1: NOM, puis champs, puis seuil, puis fourn, puis réf, puis premier lieu
-                    const finLocations = debutLocations + sortedLocations.length - 1;
-                    const colTotal = finLocations + 1; // après les emplacements
-                    
-                    categoryArticles.sort((a, b) => a.name.localeCompare(b.name)).forEach((art, rowIndex) => {
-                        const row = [];
-                        
-                        // NOM
-                        row.push(art.name);
-                        
-                        // Champs personnalisés dans l'ordre
-                        customFields.forEach(champ => {
-                            const value = art.customValues && art.customValues[champ.label] ? art.customValues[champ.label] : '';
-                            row.push(value);
-                        });
-                        
-                        // SEUIL BAS (masqué)
-                        row.push(art.seuil_bas || 0);
-                        
-                        // FOURNISSEUR
-                        row.push(art.fournisseur || '');
-                        
-                        // RÉFÉRENCE
-                        row.push(art.reference || '');
-                        
-                        // Quantités par emplacement
-                        sortedLocations.forEach(loc => {
-                            const qty = art.quantities && art.quantities[loc.id] ? art.quantities[loc.id].nombre : 0;
-                            row.push(qty > 0 ? qty : '');
-                        });
-                        
-                        // TOTAL : on mettra une formule
-                        row.push(''); // temporaire, remplacé par formule
-                        
-                        // TOTAL UNITAIRE (si conditionnement)
-                        if (conditionnementField) {
-                            row.push(''); // temporaire, remplacé par formule
-                        }
-                        
-                        const excelRow = worksheet.addRow(row);
-                        
-                        // Appliquer les bordures
-                        excelRow.eachCell((cell) => {
-                            cell.border = borderStyle;
-                        });
-                        
-                        // Définir la formule pour TOTAL
-                        const totalCell = excelRow.getCell(colTotal);
-                        const plageLocations = worksheet.getCell(excelRow.number, debutLocations).address + ':' + worksheet.getCell(excelRow.number, finLocations).address;
-                        totalCell.value = { formula: `SUM(${plageLocations})` };
-                        
-                        // Si conditionnement, définir la formule pour TOTAL UNITAIRE
-                        if (conditionnementField) {
-                            const totalUnitaireCell = excelRow.getCell(colTotal + 1);
-                            // Trouver la colonne du conditionnement
-                            const conditionnementIndex = customFields.findIndex(champ => champ === conditionnementField) + 2; // +2 car NOM en col1
-                            const conditionnementCell = worksheet.getCell(excelRow.number, conditionnementIndex).address;
-                            totalUnitaireCell.value = { formula: `${totalCell.address} * ${conditionnementCell}` };
-                        }
-                        
-                        // Mise en forme conditionnelle : on ne peut pas la définir directement par cellule, on va utiliser des règles sur la colonne
-                        // On appliquera après avoir ajouté toutes les lignes
-                    });
-                    
-                    // Appliquer une mise en forme conditionnelle sur la colonne TOTAL
-                    const totalColumn = worksheet.getColumn(colTotal);
-                    // Règle pour stock faible (orange) : si TOTAL <= SEUIL BAS et TOTAL > 0
-                    // La colonne seuil bas est à l'indice seuilBasColIndex
-                    // Malheureusement, ExcelJS ne supporte pas les formules conditionnelles avec référence à d'autres cellules facilement.
-                    // On va plutôt colorer les cellules individuellement après avoir calculé la formule.
-                    // Pour simplifier, on ne met pas de mise en forme conditionnelle automatique.
-                    // On peut le faire en parcourant les lignes et en appliquant un style en fonction de la valeur.
-                    // Mais comme les formules sont dynamiques, on ne peut pas le faire à la génération.
-                    // On laisse Excel calculer les formules et l'utilisateur pourra appliquer une MFC s'il le souhaite.
-                    
-                    // Ajuster les largeurs de colonnes
-                    const columnWidths = [
-                        { width: 30 }, // NOM
-                        ...customFields.map(() => ({ width: 15 })),
-                        { width: 0 }, // SEUIL BAS masqué
-                        { width: 20 }, // FOURNISSEUR
-                        { width: 20 }, // RÉFÉRENCE
-                        ...sortedLocations.map(() => ({ width: 12 })),
-                        { width: 12 }, // TOTAL
-                    ];
-                    if (conditionnementField) {
-                        columnWidths.push({ width: 15 }); // TOTAL UNITAIRE
-                    }
-                    
-                    worksheet.columns = columnWidths;
-                    
-                    // Figer la première ligne
-                    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
-                });
-                
-                const safeFamille = famille === 'Sans famille' ? 'SANS_FAMILLE' : famille.replace(/\s+/g, '_');
-                const fileName = `INVENTAIRE_${safeFamille}.xlsx`;
-                
-                try {
-                    const buffer = await workbook.xlsx.writeBuffer();
-                    const blob = new Blob([buffer], { 
-                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-                    });
-                    
-                    saveAs(blob, fileName);
-                    
-                    return Object.keys(groupedByCategory).length;
-                } catch (error) {
-                    console.error('Erreur lors de la génération du fichier Excel:', error);
-                    alert('Erreur lors de la génération du fichier Excel: ' + error.message);
-                    return 0;
-                }
-            } catch (error) {
-                console.error('Erreur lors de l\'export Excel:', error);
-                alert('Erreur lors de la génération du fichier Excel: ' + error.message);
-                return 0;
-            }
+    try {
+        const filteredArticles = famille === 'Sans famille'
+            ? articles.filter(art => !art.famille || art.famille.trim() === '')
+            : articles.filter(art => art.famille === famille);
+
+        if (filteredArticles.length === 0) {
+            alert(`Aucun article dans la famille "${famille}"`);
+            return 0;
         }
 
-        function importFromExcel(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const workbook = new ExcelJS.Workbook();
-                    await workbook.xlsx.load(e.target.result);
-                    
-                    let importedCount = 0;
-                    
-                    workbook.eachSheet((worksheet, sheetId) => {
-                        const headers = [];
-                        worksheet.getRow(1).eachCell((cell, colNumber) => {
-                            headers[colNumber] = cell.text;
-                        });
-                        
-                        const categorieNom = worksheet.name;
-                        
-                        worksheet.eachRow((row, rowNumber) => {
-                            if (rowNumber === 1) return;
-                            
-                            const name = row.getCell(1).text;
-                            if (!name) return;
-                            
-                            // Déterminer la famille à partir de la catégorie
-                            let familleNom = 'Sans famille';
-                            for (let f of familles) {
-                                const cat = f.categories.find(c => c.nom === categorieNom);
-                                if (cat) {
-                                    familleNom = f.nom;
-                                    break;
-                                }
-                            }
-                            
-                            let article = articles.find(a => a.name === name && a.categorie === categorieNom);
-                            
-                            // Récupérer les champs personnalisés
-                            const famille = familles.find(f => f.nom === familleNom);
-                            const catObj = famille ? famille.categories.find(c => c.nom === categorieNom) : null;
-                            const customValues = {};
-                            if (catObj && catObj.champs) {
-                                for (let i = 0; i < catObj.champs.length; i++) {
-                                    const colIndex = 2 + i; // après la colonne NOM
-                                    const champLabel = catObj.champs[i].label;
-                                    customValues[champLabel] = row.getCell(colIndex).text || '';
-                                }
-                            }
-                            
-                            // Fournisseur et Référence : ils se trouvent après les champs et le seuil bas masqué
-                            const fournisseurIndex = 2 + (catObj ? catObj.champs.length : 0) + 1; // +1 pour seuil bas
-                            const referenceIndex = fournisseurIndex + 1;
-                            const fournisseur = row.getCell(fournisseurIndex).text || '';
-                            const reference = row.getCell(referenceIndex).text || '';
-                            
-                            if (!article) {
-                                article = {
-                                    id: Date.now() + Math.random(),
-                                    name,
-                                    barcode: '',
-                                    famille: familleNom,
-                                    categorie: categorieNom,
-                                    fournisseur,
-                                    reference,
-                                    seuil_bas: 0,
-                                    customValues,
-                                    quantities: {},
-                                    createdAt: new Date().toISOString()
-                                };
-                                articles.push(article);
-                            } else {
-                                article.fournisseur = fournisseur || article.fournisseur;
-                                article.reference = reference || article.reference;
-                                article.customValues = { ...article.customValues, ...customValues };
-                            }
-                            
-                            // Lire les quantités par emplacement
-                            const debutLocations = referenceIndex + 1;
-                            for (let i = 0; i < locations.length; i++) {
-                                const colIndex = debutLocations + i;
-                                const locName = headers[colIndex];
-                                const location = locations.find(l => l.name === locName);
-                                
-                                if (location) {
-                                    const qty = parseInt(row.getCell(colIndex).text) || 0;
-                                    if (qty > 0) {
-                                        if (!article.quantities[location.id]) {
-                                            article.quantities[location.id] = { nombre: 0 };
-                                        }
-                                        article.quantities[location.id].nombre += qty;
-                                    }
-                                }
-                            }
-                            
-                            importedCount++;
-                        });
-                    });
-                    
-                    saveToStorage();
-                    alert(`${importedCount} articles importés avec succès !`);
-                    loadInventory();
-                    loadDashboard();
-                    
-                } catch (error) {
-                    console.error('Erreur lors de l\'import:', error);
-                    alert('Erreur lors de l\'import du fichier: ' + error.message);
+        const groupedByCategory = {};
+        filteredArticles.forEach(art => {
+            const categorie = art.categorie || 'Sans catégorie';
+            if (!groupedByCategory[categorie]) groupedByCategory[categorie] = [];
+            groupedByCategory[categorie].push(art);
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'Gestion Inventaire';
+        workbook.created = new Date();
+
+        const borderStyle = {
+            top:    { style: 'thin', color: { argb: 'FF000000' } },
+            left:   { style: 'thin', color: { argb: 'FF000000' } },
+            bottom: { style: 'thin', color: { argb: 'FF000000' } },
+            right:  { style: 'thin', color: { argb: 'FF000000' } }
+        };
+
+        const familleObj = familles.find(f => f.nom === famille);
+
+        Object.keys(groupedByCategory).sort().forEach(categorie => {
+            const categoryArticles = groupedByCategory[categorie];
+            const worksheet = workbook.addWorksheet(categorie.substring(0, 31).toUpperCase());
+
+            // Champs personnalisés de la catégorie
+            let customFields = [];
+            if (familleObj) {
+                const catObj = familleObj.categories.find(c => c.nom === categorie);
+                if (catObj && catObj.champs) {
+                    customFields = catObj.champs.sort((a, b) => a.ordre - b.ordre);
                 }
-            };
-            
-            reader.readAsArrayBuffer(file);
-            event.target.value = '';
+            }
+
+            // Détecter le champ CDT
+            const conditionnementField = customFields.find(champ =>
+                champ.label === 'CDT' || champ.label.includes('CONDITIONNEMENT')
+            );
+
+            // Détecter les champs AVANT CDT (ceux qui seront mutualisés / saut de ligne)
+            const indexCDT = conditionnementField
+                ? customFields.indexOf(conditionnementField)
+                : -1;
+            const champsAvantCDT = indexCDT > 0
+                ? customFields.slice(0, indexCDT)
+                : []; // si pas de CDT, aucun champ n'est "mutualisé"
+
+            // --- Construction des headers ---
+            const headers = ['NOM'];
+            customFields.forEach(champ => headers.push(champ.label));
+            headers.push('SEUIL BAS (caché)');
+            headers.push('FOURNISSEUR', 'RÉFÉRENCE');
+
+            const sortedLocations = [...locations].sort((a, b) => a.name.localeCompare(b.name));
+            sortedLocations.forEach(loc => headers.push(loc.name));
+            headers.push('TOTAL');
+            if (conditionnementField) headers.push('TOTAL UNITAIRE');
+
+            // --- Ligne de headers ---
+            const headerRow = worksheet.addRow(headers);
+            headerRow.eachCell((cell) => {
+                cell.font      = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+                cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } };
+                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                cell.border    = borderStyle;
+            });
+
+            // Colonnes fixes
+            const seuilBasColIndex  = 2 + customFields.length;       // 1-based
+            const fournisseurIndex  = seuilBasColIndex + 1;
+            const referenceIndex    = fournisseurIndex + 1;
+            const debutLocations    = referenceIndex + 1;
+            const finLocations      = debutLocations + sortedLocations.length - 1;
+            const colTotal          = finLocations + 1;
+
+            // Masquer la colonne seuil bas
+            worksheet.getColumn(seuilBasColIndex).width = 0;
+
+            // --- Tri des articles : par NOM puis par champs avant CDT ---
+            const sorted = [...categoryArticles].sort((a, b) => {
+                // D'abord par nom
+                const nameCmp = a.name.localeCompare(b.name);
+                if (nameCmp !== 0) return nameCmp;
+                // Ensuite par chaque champ avant CDT dans l'ordre
+                for (const champ of champsAvantCDT) {
+                    const va = (a.customValues && a.customValues[champ.label]) || '';
+                    const vb = (b.customValues && b.customValues[champ.label]) || '';
+                    const cmp = String(va).localeCompare(String(vb), undefined, { numeric: true });
+                    if (cmp !== 0) return cmp;
+                }
+                return 0;
+            });
+
+            // --- Écriture des lignes ---
+            let previousName   = null;
+            let previousValues = {}; // champ.label -> dernière valeur écrite
+
+            sorted.forEach((art) => {
+                const row = [];
+
+                // COL 1 : NOM — n'écrire que si différent du précédent
+                const nameChanged = art.name !== previousName;
+                row.push(nameChanged ? art.name : '');
+
+                // Champs perso
+                customFields.forEach(champ => {
+                    const value = (art.customValues && art.customValues[champ.label] !== undefined)
+                        ? art.customValues[champ.label]
+                        : '';
+
+                    // Pour les champs AVANT CDT : n'écrire que si différent du précédent
+                    if (champsAvantCDT.includes(champ)) {
+                        const prev = previousValues[champ.label] !== undefined
+                            ? previousValues[champ.label]
+                            : null;
+                        const isDiff = nameChanged || String(value) !== String(prev);
+                        row.push(isDiff ? value : '');
+                        previousValues[champ.label] = value;
+                    } else {
+                        // CDT et champs après CDT : toujours écrire
+                        row.push(value);
+                    }
+                });
+
+                // Seuil bas (toujours, colonne cachée)
+                row.push(art.seuil_bas || 0);
+
+                // Fournisseur, référence
+                row.push(art.fournisseur || '');
+                row.push(art.reference   || '');
+
+                // Quantités par emplacement
+                sortedLocations.forEach(loc => {
+                    const qty = art.quantities && art.quantities[loc.id]
+                        ? art.quantities[loc.id].nombre
+                        : 0;
+                    row.push(qty > 0 ? qty : '');
+                });
+
+                // TOTAL (formule)
+                row.push('');
+                if (conditionnementField) row.push('');
+
+                const excelRow = worksheet.addRow(row);
+
+                // Bordures
+                excelRow.eachCell((cell) => { cell.border = borderStyle; });
+
+                // Formule TOTAL
+                const totalCell = excelRow.getCell(colTotal);
+                const plage = worksheet.getCell(excelRow.number, debutLocations).address +
+                              ':' +
+                              worksheet.getCell(excelRow.number, finLocations).address;
+                totalCell.value = { formula: `SUM(${plage})` };
+
+                // Formule TOTAL UNITAIRE
+                if (conditionnementField) {
+                    const totalUnitaireCell = excelRow.getCell(colTotal + 1);
+                    const conditionnementIndex = customFields.indexOf(conditionnementField) + 2;
+                    const conditionnementCell  = worksheet.getCell(excelRow.number, conditionnementIndex).address;
+                    totalUnitaireCell.value = { formula: `${totalCell.address} * ${conditionnementCell}` };
+                }
+
+                // --- Saut de ligne : ligne vide entre deux noms différents ---
+                if (previousName !== null && nameChanged) {
+                    // Insérer une ligne vide AVANT la ligne courante
+                    // (on l'ajoute après, donc on insère rétroactivement via une ligne vide)
+                    // Astuce : on ajoute la ligne vide AVANT d'écrire la ligne de données,
+                    // mais puisqu'on vient de l'écrire, on insère une ligne vide maintenant
+                    // pour séparer le PROCHAIN groupe — on le fait donc au début du groupe suivant.
+                    // => Implémentation correcte : insérer AVANT (voir ci-dessous avec flag)
+                }
+
+                previousName = art.name;
+            });
+
+            // --- Relecture pour insérer les sauts de ligne entre groupes de noms ---
+            // Plus simple : reconstruire avec insertions explicites
+            // On efface la feuille et on la reconstruit avec les sauts
+            // Supprimer toutes les lignes de données (garder header row=1)
+            while (worksheet.rowCount > 1) {
+                worksheet.spliceRows(2, 1);
+            }
+
+            // Réinitialiser le tracking
+            previousName   = null;
+            previousValues = {};
+
+            sorted.forEach((art) => {
+                // --- Saut de ligne AVANT chaque nouveau nom (sauf le premier) ---
+                const nameChanged = art.name !== previousName;
+                if (nameChanged && previousName !== null) {
+                    const emptyRow = worksheet.addRow(new Array(headers.length).fill(''));
+                    emptyRow.height = 12;
+                }
+
+                const row = [];
+
+                // COL 1 : NOM
+                row.push(nameChanged ? art.name : '');
+
+                // Champs perso
+                customFields.forEach(champ => {
+                    const value = (art.customValues && art.customValues[champ.label] !== undefined)
+                        ? art.customValues[champ.label]
+                        : '';
+
+                    if (champsAvantCDT.includes(champ)) {
+                        const prev = previousValues[champ.label] !== undefined
+                            ? previousValues[champ.label]
+                            : null;
+                        const isDiff = nameChanged || String(value) !== String(prev);
+                        row.push(isDiff ? value : '');
+                        previousValues[champ.label] = value;
+                    } else {
+                        row.push(value);
+                    }
+                });
+
+                row.push(art.seuil_bas || 0);
+                row.push(art.fournisseur || '');
+                row.push(art.reference   || '');
+
+                sortedLocations.forEach(loc => {
+                    const qty = art.quantities && art.quantities[loc.id]
+                        ? art.quantities[loc.id].nombre
+                        : 0;
+                    row.push(qty > 0 ? qty : '');
+                });
+
+                row.push('');
+                if (conditionnementField) row.push('');
+
+                const excelRow = worksheet.addRow(row);
+                excelRow.eachCell((cell) => { cell.border = borderStyle; });
+
+                // Formule TOTAL
+                const totalCell = excelRow.getCell(colTotal);
+                const plage = worksheet.getCell(excelRow.number, debutLocations).address +
+                              ':' +
+                              worksheet.getCell(excelRow.number, finLocations).address;
+                totalCell.value = { formula: `SUM(${plage})` };
+
+                // Formule TOTAL UNITAIRE
+                if (conditionnementField) {
+                    const totalUnitaireCell = excelRow.getCell(colTotal + 1);
+                    const conditionnementIndex = customFields.indexOf(conditionnementField) + 2;
+                    const conditionnementCell  = worksheet.getCell(excelRow.number, conditionnementIndex).address;
+                    totalUnitaireCell.value = { formula: `${totalCell.address} * ${conditionnementCell}` };
+                }
+
+                previousName = art.name;
+            });
+
+            // --- Largeurs de colonnes ---
+            const columnWidths = [
+                { width: 30 },
+                ...customFields.map(() => ({ width: 15 })),
+                { width: 0 },   // seuil bas caché
+                { width: 20 },  // fournisseur
+                { width: 20 },  // référence
+                ...sortedLocations.map(() => ({ width: 12 })),
+                { width: 12 },  // total
+            ];
+            if (conditionnementField) columnWidths.push({ width: 15 });
+
+            worksheet.columns = columnWidths;
+            worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+        });
+
+        // --- Génération et téléchargement ---
+        const safeFamille = famille === 'Sans famille'
+            ? 'SANS_FAMILLE'
+            : famille.replace(/\s+/g, '_');
+        const fileName = `INVENTAIRE_${safeFamille}.xlsx`;
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        saveAs(blob, fileName);
+
+        return Object.keys(groupedByCategory).length;
+
+    } catch (error) {
+        console.error('Erreur lors de l\'export Excel:', error);
+        alert('Erreur lors de la génération du fichier Excel: ' + error.message);
+        return 0;
+    }
+}
+
+        function importFromExcel(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(e.target.result);
+
+            let importedCount = 0;
+
+            // Collecter toutes les feuilles
+            const sheets = [];
+            workbook.eachSheet((worksheet) => sheets.push(worksheet));
+
+            for (const worksheet of sheets) {
+
+                // === 1. Lire les headers ===
+                const headers = {}; // colNumber -> nom
+                worksheet.getRow(1).eachCell((cell, colNumber) => {
+                    if (cell.text && cell.text.trim()) {
+                        headers[colNumber] = cell.text.trim();
+                    }
+                });
+
+                const categorieNom = worksheet.name;
+
+                // === 2. Identifier dynamiquement les colonnes via les headers ===
+                const COL_NOM = 1;
+
+                const colSeuilBasStr = Object.keys(headers).find(k => headers[k] === 'SEUIL BAS (caché)');
+                if (!colSeuilBasStr) {
+                    console.warn(`Feuille "${categorieNom}" : colonne "SEUIL BAS (caché)" introuvable, feuille ignorée.`);
+                    continue;
+                }
+                const colSeuilBas   = parseInt(colSeuilBasStr);
+                const colFournisseur = colSeuilBas + 1;
+                const colReference   = colSeuilBas + 2;
+
+                // Champs personnalisés = colonnes 2 à colSeuilBas-1
+                const customFieldCols = [];
+                for (let c = 2; c < colSeuilBas; c++) {
+                    if (headers[c]) customFieldCols.push({ col: c, label: headers[c] });
+                }
+
+                // Colonnes d'emplacements = après RÉFÉRENCE, nom connu dans locations, hors TOTAL / TOTAL UNITAIRE
+                const locationCols = [];
+                for (const [k, v] of Object.entries(headers)) {
+                    const colNum = parseInt(k);
+                    if (colNum > colReference && v !== 'TOTAL' && v !== 'TOTAL UNITAIRE') {
+                        const loc = locations.find(l => l.name === v);
+                        if (loc) locationCols.push({ col: colNum, location: loc });
+                    }
+                }
+
+                // === 3. Déterminer la famille depuis les familles en mémoire ===
+                let familleNom = 'Sans famille';
+                for (const f of familles) {
+                    if (f.categories.find(c => c.nom === categorieNom)) {
+                        familleNom = f.nom;
+                        break;
+                    }
+                }
+
+                // === 4. Parcourir les lignes de données ===
+                // Propagation : NOM et champs perso ne sont écrits que sur
+                // la première ligne d'un groupe — on mémorise la dernière valeur non vide.
+                let currentName        = '';
+                let currentCustomValues = {};
+                let currentSeuilBas    = 0;
+                let currentFournisseur = '';
+                let currentReference   = '';
+
+                worksheet.eachRow((row, rowNumber) => {
+                    if (rowNumber === 1) return;
+
+                    // Ignorer les lignes vraiment vides
+                    let hasData = false;
+                    row.eachCell({ includeEmpty: false }, () => { hasData = true; });
+                    if (!hasData) return;
+
+                    // --- Nom : propager si vide ---
+                    const nameCellText = row.getCell(COL_NOM).text.trim();
+                    if (nameCellText) {
+                        currentName = nameCellText;
+                    }
+                    if (!currentName) return;
+
+                    // --- Champs perso : propager champ par champ si vide ---
+                    customFieldCols.forEach(({ col, label }) => {
+                        const cellText = row.getCell(col).text.trim();
+                        if (cellText !== '') {
+                            currentCustomValues[label] = cellText;
+                        }
+                        // si vide → on conserve la valeur précédente (propagation)
+                    });
+
+                    // --- Seuil bas, fournisseur, référence : lire sur les lignes avec un nom ---
+                    if (nameCellText) {
+                        const seuilCell = row.getCell(colSeuilBas);
+                        currentSeuilBas = typeof seuilCell.value === 'number'
+                            ? Math.floor(seuilCell.value)
+                            : parseInt(seuilCell.value) || 0;
+                        currentFournisseur = row.getCell(colFournisseur).text.trim() || '';
+                        currentReference   = row.getCell(colReference).text.trim()   || '';
+                    }
+
+                    // --- Clé unique : NOM + tous les champs perso propagés ---
+                    const articleKey = currentName + '|' +
+                        customFieldCols.map(({ label }) => currentCustomValues[label] || '').join('|');
+
+                    // --- Lire les quantités de cette ligne ---
+                    const quantities = {};
+                    locationCols.forEach(({ col, location }) => {
+                        const cell = row.getCell(col);
+                        let qty = 0;
+                        if (cell.value !== null && cell.value !== undefined && cell.value !== '') {
+                            if (typeof cell.value === 'number') {
+                                qty = Math.floor(cell.value);
+                            } else if (typeof cell.value === 'object' && cell.value.result !== undefined) {
+                                qty = Math.floor(cell.value.result) || 0;
+                            } else {
+                                qty = parseInt(cell.value) || 0;
+                            }
+                        }
+                        if (qty > 0) quantities[location.id] = { nombre: qty };
+                    });
+
+                    // --- Trouver ou créer l'article ---
+                    let article = articles.find(a =>
+                        a._importKey === articleKey && a.categorie === categorieNom
+                    );
+
+                    if (!article) {
+                        // Rétrocompatibilité : chercher sans _importKey
+                        article = articles.find(a =>
+                            a.name === currentName &&
+                            a.categorie === categorieNom &&
+                            customFieldCols.every(({ label }) =>
+                                (a.customValues && a.customValues[label] || '') ===
+                                (currentCustomValues[label] || '')
+                            )
+                        );
+                    }
+
+                    if (!article) {
+                        // Nouvel article
+                        article = {
+                            id: Date.now() + Math.random(),
+                            name: currentName,
+                            barcode: '',
+                            famille: familleNom,
+                            categorie: categorieNom,
+                            fournisseur: currentFournisseur,
+                            reference: currentReference,
+                            seuil_bas: currentSeuilBas,
+                            customValues: { ...currentCustomValues },
+                            quantities: {},
+                            _importKey: articleKey,
+                            createdAt: new Date().toISOString()
+                        };
+                        articles.push(article);
+                    } else {
+                        // Mise à jour article existant
+                        article.fournisseur  = currentFournisseur;
+                        article.reference    = currentReference;
+                        article.seuil_bas    = currentSeuilBas;
+                        article.customValues = { ...currentCustomValues };
+                        article._importKey   = articleKey;
+                        article.quantities   = {}; // reset avant réaffectation
+                    }
+
+                    // Fusionner les quantités
+                    Object.assign(article.quantities, quantities);
+                    importedCount++;
+                });
+            }
+
+            saveToStorage();
+            alert(`${importedCount} articles importés avec succès !`);
+            loadInventory();
+            loadDashboard();
+
+        } catch (error) {
+            console.error('Erreur lors de l\'import:', error);
+            alert('Erreur lors de l\'import du fichier: ' + error.message);
         }
+    };
+
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
+}
 
         function backupData() {
             const data = {
