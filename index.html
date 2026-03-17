@@ -1589,6 +1589,18 @@
     color: #03dac6;
     font-weight: 400;
     margin-left: 8px;
+		}
+		
+		.stock-low-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #FFA726;
+    margin-left: 6px;
+}
+.stock-very-low-indicator {
+    background-color: #cf6679;
 }
     </style>
 </head>
@@ -1979,9 +1991,7 @@
                             <option value="">Sélectionnez une famille</option>
                         </select>
                     </div>
-                    <div class="step-nav">
-                        <button type="button" class="step-nav-btn next" onclick="goToStep(2)">Suivant</button>
-                    </div>
+                    
                 </div>
                 
                 <div class="form-step" id="step2">
@@ -2028,7 +2038,6 @@
                     </div>
                     
                     <div class="step-nav">
-                        <button type="button" class="step-nav-btn prev" onclick="goToStep(1)">Précédent</button>
                         <button type="submit" class="btn-primary">Enregistrer</button>
                     </div>
                 </div>
@@ -3016,111 +3025,254 @@
 
         // Affichage des articles avec tri alphabétique
         function displayArticles(filtered) {
-    const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-    
-    const listHtml = sorted.map(art => {
-        const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
-        const locs = Object.entries(art.quantities || {}).filter(([_, q]) => q.nombre > 0);
-        
-        const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
-        const isVeryLowStock = totalQty === 0;
-        
-        // Récupérer les champs à afficher entre NOM et CDT (ou NOM et FOURNISSEUR)
-        let extraFields = '';
-        const famille = familles.find(f => f.nom === art.famille);
-        if (famille) {
-            const categorie = famille.categories.find(c => c.nom === art.categorie);
-            if (categorie && categorie.champs && categorie.champs.length > 0) {
-                const champsTriés = [...categorie.champs].sort((a, b) => a.ordre - b.ordre);
-                
-                // Trouver l'index du champ CDT, sinon FOURNISSEUR est la limite
-                const indexCDT = champsTriés.findIndex(c =>
-                    c.label === 'CDT' || c.label.includes('CONDITIONNEMENT')
-                );
-                
-                // Prendre les champs avant CDT (ou tous si CDT absent)
-                const champsAvantCDT = indexCDT > 0
-                    ? champsTriés.slice(0, indexCDT)
-                    : champsTriés;
-                
-                const parts = champsAvantCDT
-                    .map(champ => art.customValues && art.customValues[champ.label]
-                        ? art.customValues[champ.label]
-                        : null)
-                    .filter(Boolean);
-                
-                if (parts.length > 0) {
-                    extraFields = `<span class="article-extra-fields">${parts.join(' · ')}</span>`;
-                }
-            }
-        }
-        
-        return `
-            <div class="article-card" onclick="showArticleDetail('${art.id}')">
-                <div class="article-header">
-                    <div>
-                        <div class="article-name">
-                            ${art.name}
-                            ${extraFields}
-                            ${isLowStock ? '<span class="stock-low-indicator" title="Stock faible"></span>' : ''}
-                            ${isVeryLowStock ? '<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>' : ''}
-                        </div>
-                        ${art.famille ? `<div class="article-meta">📁 ${art.famille} / ${art.categorie}</div>` : ''}
-                    </div>
-                    <div class="article-quantity">${totalQty}</div>
-                </div>
-                <div class="article-locations">
-                    ${locs.map(([locId, qty]) => {
-                        const loc = locations.find(l => l.id.toString() === locId);
-                        return loc ? `<span class="location-badge">${loc.name}: ${qty.nombre}</span>` : '';
-                    }).join('')}
-                </div>
-            </div>
-        `;
-    }).join('') || '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Aucun article trouvé</div></div>';
+    // Regrouper par famille puis catégorie
+    const grouped = {};
+    filtered.forEach(art => {
+        const famille = art.famille || 'Sans famille';
+        const categorie = art.categorie || 'Sans catégorie';
+        if (!grouped[famille]) grouped[famille] = {};
+        if (!grouped[famille][categorie]) grouped[famille][categorie] = [];
+        grouped[famille][categorie].push(art);
+    });
 
-    document.getElementById('article-list').innerHTML = listHtml;
+    // Trier les familles et catégories alphabétiquement
+    const sortedFamilies = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+
+    let html = '';
+
+    sortedFamilies.forEach(famille => {
+        const categories = grouped[famille];
+        const sortedCategories = Object.keys(categories).sort((a, b) => a.localeCompare(b));
+
+        // En-tête de famille
+        html += `<div class="detail-section" style="margin-top: 16px;">`;
+        html += `<div class="section-title" style="font-size: 18px; color: #bb86fc;">📁 ${famille}</div>`;
+
+        sortedCategories.forEach(categorie => {
+            const articlesInCat = categories[categorie];
+            // Tri des articles par nom (et éventuellement champs avant CDT)
+            const sortedArticles = [...articlesInCat].sort((a, b) => a.name.localeCompare(b.name));
+
+            // En-tête de catégorie
+            html += `<div style="margin-top: 12px;">`;
+            html += `<div style="font-size: 16px; color: #03dac6; margin-bottom: 8px;">🏷️ ${categorie}</div>`;
+
+            // Liste des articles de cette catégorie
+            sortedArticles.forEach(art => {
+                const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
+
+                // Construction de la ligne d'information (nom + champs avant CDT)
+                let ligneInfo = art.name;
+                const familleObj = familles.find(f => f.nom === famille);
+                if (familleObj) {
+                    const catObj = familleObj.categories.find(c => c.nom === categorie);
+                    if (catObj && catObj.champs && catObj.champs.length > 0) {
+                        const champsTriés = [...catObj.champs].sort((a, b) => a.ordre - b.ordre);
+                        const cdtChamp = champsTriés.find(c => c.label === 'CDT' || c.label.includes('CONDITIONNEMENT'));
+                        const champsAvantCDT = cdtChamp ? champsTriés.slice(0, champsTriés.indexOf(cdtChamp)) : [];
+                        const partsAvant = champsAvantCDT
+                            .map(champ => art.customValues && art.customValues[champ.label] ? art.customValues[champ.label] : '')
+                            .filter(v => v !== '');
+                        if (partsAvant.length > 0) {
+                            ligneInfo += ' ' + partsAvant.join(' ');
+                        }
+                    }
+                }
+
+                // Indicateurs de stock (pastilles)
+                const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
+                const isVeryLowStock = totalQty === 0;
+                const stockIndicators = [];
+                if (isLowStock) stockIndicators.push('<span class="stock-low-indicator" title="Stock faible"></span>');
+                if (isVeryLowStock) stockIndicators.push('<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>');
+
+                // Carte article avec total à droite
+                html += `
+                    <div class="article-card" onclick="showArticleDetail('${art.id}')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #e0e0e0;">
+                                ${ligneInfo} ${stockIndicators.join(' ')}
+                            </div>
+                            <div style="font-size: 12px; color: #888; margin-top: 2px;">
+                                ${art.fournisseur ? art.fournisseur + ' ' : ''}${art.reference ? 'Ref ' + art.reference : ''}
+                            </div>
+                        </div>
+                        <div class="article-quantity" style="background: #bb86fc; color: #000; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">
+                            ${totalQty}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`; // fin catégorie
+        });
+
+        html += `</div>`; // fin famille
+    });
+
+    if (html === '') {
+        html = '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Aucun article trouvé</div></div>';
+    }
+
+    document.getElementById('article-list').innerHTML = html;
 }
 
         function loadInventory() {
-    const locationFilters = document.getElementById('location-filters');
-    const uniqueLocations = [...new Set(articles.flatMap(art => 
-        Object.keys(art.quantities || {})
-    ))].map(id => locations.find(l => l.id.toString() === id)).filter(Boolean);
-    
-    locationFilters.innerHTML = '<div class="filter-chip active" data-filter="all" onclick="filterByLocation(\'all\')">Tous</div>' +
-        uniqueLocations.map(loc => 
-            `<div class="filter-chip" data-filter="${loc.id}" onclick="filterByLocation('${loc.id}')">${loc.name}</div>`
-        ).join('');
-    
-    // Brancher la barre de recherche
-    const searchInput = document.getElementById('search-input');
-    searchInput.value = '';
-    searchInput.oninput = function() {
-        const term = this.value.toLowerCase();
-        const activeFilter = document.querySelector('#location-filters .filter-chip.active')?.dataset.filter || 'all';
-        
-        let filtered = activeFilter === 'all'
-            ? articles
-            : articles.filter(art => art.quantities && art.quantities[activeFilter]);
-        
-        if (term) {
-            filtered = filtered.filter(art =>
-                art.name.toLowerCase().includes(term) ||
-                (art.famille && art.famille.toLowerCase().includes(term)) ||
-                (art.categorie && art.categorie.toLowerCase().includes(term)) ||
-                (art.fournisseur && art.fournisseur.toLowerCase().includes(term)) ||
-                (art.reference && art.reference.toLowerCase().includes(term)) ||
-                (art.barcode && art.barcode.toLowerCase().includes(term))
-            );
-        }
-        
-        displayArticles(filtered);
-    };
-    
-    displayArticles(articles);
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    const activeFilter = document.querySelector('.filter-chip.active')?.dataset.location;
+
+    let filtered = articles.filter(art => 
+        art.name.toLowerCase().includes(searchTerm) ||
+        (art.barcode && art.barcode.toLowerCase().includes(searchTerm)) ||
+        (art.famille && art.famille.toLowerCase().includes(searchTerm)) ||
+        (art.categorie && art.categorie.toLowerCase().includes(searchTerm))
+    );
+
+    if (activeFilter && activeFilter !== 'all') {
+        filtered = filtered.filter(art => art.quantities && art.quantities[activeFilter]);
+    }
+
+    // Appel à la nouvelle fonction
+    renderInventoryAccordion(filtered);
 }
 
+		// État d'ouverture des catégories (persistant lors des re-rendus)
+let inventoryOpenCategories = {};
+
+function renderInventoryAccordion(filteredArticles) {
+    // Regrouper par famille puis catégorie
+    const grouped = {};
+    filteredArticles.forEach(art => {
+        const famille = art.famille || 'Sans famille';
+        const categorie = art.categorie || 'Sans catégorie';
+        if (!grouped[famille]) grouped[famille] = {};
+        if (!grouped[famille][categorie]) grouped[famille][categorie] = [];
+        grouped[famille][categorie].push(art);
+    });
+
+    const sortedFamilies = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+    let html = '';
+
+    sortedFamilies.forEach(famille => {
+        const categories = grouped[famille];
+        const sortedCategories = Object.keys(categories).sort((a, b) => a.localeCompare(b));
+
+        html += `<div class="detail-section" style="margin-top: 16px;">`;
+        html += `<div class="section-title" style="font-size: 18px; color: #bb86fc;">📁 ${famille}</div>`;
+
+        sortedCategories.forEach(categorie => {
+            const articlesInCat = categories[categorie];
+            const catKey = `${famille}|${categorie}`;
+            const isOpen = inventoryOpenCategories[catKey] || false;
+
+            // En‑tête de catégorie cliquable
+            html += `
+                <div class="category-header" data-catkey="${catKey}" style="cursor: pointer; margin-top: 8px; padding: 8px; background: #1e1e1e; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 16px; color: #03dac6;">🏷️ ${categorie}</span>
+                    <span style="font-size: 12px; color: #888;">(${articlesInCat.length} article${articlesInCat.length > 1 ? 's' : ''})</span>
+                    <span style="margin-left: auto;">${isOpen ? '▼' : '▶'}</span>
+                </div>
+            `;
+
+            // Contenu de la catégorie (visible si ouvert)
+            html += `<div class="category-content" data-catkey="${catKey}" style="display: ${isOpen ? 'block' : 'none'};">`;
+
+            // Tri des articles (par nom puis éventuellement champs avant CDT)
+            const sortedArticles = [...articlesInCat].sort((a, b) => a.name.localeCompare(b.name));
+            sortedArticles.forEach(art => {
+                const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
+                const locs = Object.entries(art.quantities || {}).filter(([_, q]) => q.nombre > 0);
+
+                // Construction de la ligne d'information (nom + champs avant CDT)
+                let ligneInfo = art.name;
+                const familleObj = familles.find(f => f.nom === famille);
+                if (familleObj) {
+                    const catObj = familleObj.categories.find(c => c.nom === categorie);
+                    if (catObj && catObj.champs) {
+                        const champsTriés = [...catObj.champs].sort((a, b) => a.ordre - b.ordre);
+                        const cdtChamp = champsTriés.find(c => c.label === 'CDT' || c.label.includes('CONDITIONNEMENT'));
+                        const champsAvantCDT = cdtChamp ? champsTriés.slice(0, champsTriés.indexOf(cdtChamp)) : [];
+                        const partsAvant = champsAvantCDT
+                            .map(champ => art.customValues && art.customValues[champ.label] ? art.customValues[champ.label] : '')
+                            .filter(v => v !== '');
+                        if (partsAvant.length > 0) {
+                            ligneInfo += ' ' + partsAvant.join(' ');
+                        }
+                    }
+                }
+
+                // Valeur du conditionnement (champ CDT)
+                let cdtValue = '';
+                if (familleObj) {
+                    const catObj = familleObj.categories.find(c => c.nom === categorie);
+                    if (catObj && catObj.champs) {
+                        const cdtChamp = catObj.champs.find(c => c.label === 'CDT' || c.label.includes('CONDITIONNEMENT'));
+                        if (cdtChamp && art.customValues && art.customValues[cdtChamp.label]) {
+                            cdtValue = art.customValues[cdtChamp.label];
+                        }
+                    }
+                }
+
+                // Indicateurs de stock (pastilles)
+                const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
+                const isVeryLowStock = totalQty === 0;
+                const stockIndicators = [];
+                if (isLowStock) stockIndicators.push('<span class="stock-low-indicator" title="Stock faible"></span>');
+                if (isVeryLowStock) stockIndicators.push('<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>');
+
+                html += `
+                    <div class="article-card" onclick="showArticleDetail('${art.id}')" style="margin-left: 16px; margin-bottom: 8px; padding: 12px; background: #1e1e1e; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #e0e0e0;">
+                                    ${ligneInfo} ${stockIndicators.join(' ')}
+                                </div>
+                                <div style="font-size: 12px; color: #888; margin-top: 2px;">
+                                    ${cdtValue ? 'Cdt ' + cdtValue : ''} ${art.fournisseur ? art.fournisseur : ''} ${art.reference ? 'Ref ' + art.reference : ''}
+                                </div>
+                                <div style="font-size: 12px; color: #03dac6; margin-top: 4px;">
+                                    ${locs.map(([locId, qty]) => {
+                                        const loc = locations.find(l => l.id.toString() === locId);
+                                        return loc ? `<span style="display: inline-block; background: #2a2a2a; padding: 2px 8px; border-radius: 12px; margin-right: 4px;">${loc.name}: ${qty.nombre}</span>` : '';
+                                    }).join('')}
+                                </div>
+                            </div>
+                            <div class="article-quantity" style="background: #bb86fc; color: #000; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">
+                                ${totalQty}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`; // fin category-content
+        });
+
+        html += `</div>`; // fin famille
+    });
+
+    if (html === '') {
+        html = '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Aucun article trouvé</div></div>';
+    }
+
+    document.getElementById('article-list').innerHTML = html;
+
+    // Attacher les événements de clic sur les en‑têtes de catégorie
+    document.querySelectorAll('.category-header').forEach(header => {
+        header.addEventListener('click', function(e) {
+            const catKey = this.dataset.catkey;
+            const content = document.querySelector(`.category-content[data-catkey="${catKey}"]`);
+            if (content) {
+                const isNowOpen = content.style.display === 'block';
+                content.style.display = isNowOpen ? 'none' : 'block';
+                inventoryOpenCategories[catKey] = !isNowOpen;
+                const arrow = this.querySelector('span:last-child');
+                if (arrow) arrow.textContent = inventoryOpenCategories[catKey] ? '▼' : '▶';
+            }
+        });
+    });
+}
+		
         function filterByLocation(locationId) {
     document.querySelectorAll('#location-filters .filter-chip').forEach(chip => {
         chip.classList.remove('active');
@@ -3679,110 +3831,239 @@
         }
 
         async function generateAndDownloadCatalogue() {
-            const familleFilter = document.getElementById('barcode-famille-filter').value;
-            
-            let filteredArticles = articles;
-            if (familleFilter) {
-                filteredArticles = articles.filter(art => art.famille === familleFilter);
-            }
-            
-            if (filteredArticles.length === 0) {
-                alert('Aucun article à exporter');
-                return;
-            }
-            
-            const groupedByFamille = {};
-            filteredArticles.forEach(art => {
-                const famille = art.famille || 'Sans famille';
-                if (!groupedByFamille[famille]) {
-                    groupedByFamille[famille] = {};
+    const familleFilter = document.getElementById('barcode-famille-filter').value;
+
+    let filtered = articles.filter(art => {
+        if (familleFilter && art.famille !== familleFilter) return false;
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        alert('Aucun article trouvé pour générer le catalogue');
+        return;
+    }
+
+    // Regroupement par famille → catégorie
+    const groupedByFamily = {};
+    filtered.forEach(art => {
+        const famille = art.famille || 'Sans famille';
+        const categorie = art.categorie || 'Sans catégorie';
+
+        if (!groupedByFamily[famille]) groupedByFamily[famille] = {};
+        if (!groupedByFamily[famille][categorie]) groupedByFamily[famille][categorie] = [];
+        groupedByFamily[famille][categorie].push(art);
+    });
+
+    // Tri des familles et catégories
+    const sortedFamilies = Object.keys(groupedByFamily).sort();
+
+    // Pour chaque catégorie, trier les articles par nom puis par champs avant CDT
+    sortedFamilies.forEach(famille => {
+        const categories = Object.keys(groupedByFamily[famille]).sort();
+        categories.forEach(categorie => {
+            groupedByFamily[famille][categorie].sort((a, b) => {
+                // Récupération des champs de la catégorie
+                const familleObj = familles.find(f => f.nom === famille);
+                const catObj = familleObj?.categories.find(c => c.nom === categorie);
+                const champs = catObj?.champs?.sort((x, y) => x.ordre - y.ordre) || [];
+                const cdtIndex = champs.findIndex(ch => ch.label === 'CDT' || ch.label.includes('CONDITIONNEMENT'));
+
+                // Champs avant CDT
+                const champsAvantCDT = cdtIndex > 0 ? champs.slice(0, cdtIndex) : [];
+
+                // Comparaison par nom
+                const nameCmp = a.name.localeCompare(b.name);
+                if (nameCmp !== 0) return nameCmp;
+
+                // Puis par chaque champ avant CDT
+                for (const champ of champsAvantCDT) {
+                    const valA = (a.customValues && a.customValues[champ.label]) || '';
+                    const valB = (b.customValues && b.customValues[champ.label]) || '';
+                    const cmp = String(valA).localeCompare(String(valB), undefined, { numeric: true });
+                    if (cmp !== 0) return cmp;
                 }
-                const categorie = art.categorie || 'Sans catégorie';
-                if (!groupedByFamille[famille][categorie]) {
-                    groupedByFamille[famille][categorie] = [];
-                }
-                groupedByFamille[famille][categorie].push(art);
+                return 0;
             });
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Catalogue codes-barres</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .famille { margin-bottom: 30px; page-break-after: always; }
-                        .famille h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 5px; }
-                        .categorie { margin: 20px 0; }
-                        .categorie h2 { color: #666; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
-                        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-                        .item { border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #f9f9f9; }
-                        .barcode { background: white; padding: 10px; text-align: center; border: 1px solid #eee; }
-                        .barcode svg { max-width: 100%; height: auto; }
-                        .info { margin-top: 10px; font-size: 12px; }
-                        .info div { margin: 3px 0; }
-                        .label { font-weight: bold; color: #555; }
-                        @media print {
-                            .famille { page-break-after: always; }
-                            .grid { break-inside: avoid; }
-                        }
-                    </style>
-                </head>
-                <body>
-            `);
-            
-            for (const [famille, categories] of Object.entries(groupedByFamille)) {
-                printWindow.document.write(`<div class="famille"><h1>${famille}</h1>`);
-                
-                for (const [categorie, articles] of Object.entries(categories)) {
-                    printWindow.document.write(`<div class="categorie"><h2>${categorie}</h2><div class="grid">`);
-                    
-                    articles.forEach(art => {
-                        printWindow.document.write('<div class="item">');
-                        printWindow.document.write('<div class="barcode">');
-                        
-                        if (art.barcode) {
-                            printWindow.document.write(`<svg id="barcode-${art.id}"></svg>`);
-                            printWindow.document.write(`<script>
-                                JsBarcode("#barcode-${art.id}", "${art.barcode}", {
-                                    format: "CODE128",
-                                    width: 2,
-                                    height: 50,
-                                    displayValue: true
-                                });
-                            <\/script>`);
-                        } else {
-                            printWindow.document.write('<div style="height:50px; display:flex; align-items:center; justify-content:center; background:#f0f0f0; border:2px dashed #999;">Pas de code</div>');
-                        }
-                        
-                        printWindow.document.write('</div>');
-                        printWindow.document.write('<div class="info">');
-                        printWindow.document.write(`<div><span class="label">Nom:</span> ${art.name}</div>`);
-                        if (art.fournisseur) printWindow.document.write(`<div><span class="label">Fournisseur:</span> ${art.fournisseur}</div>`);
-                        if (art.reference) printWindow.document.write(`<div><span class="label">Réf:</span> ${art.reference}</div>`);
-                        if (art.barcode) printWindow.document.write(`<div><span class="label">Code:</span> ${art.barcode}</div>`);
-                        printWindow.document.write('</div></div>');
-                    });
-                    
-                    printWindow.document.write('</div></div>');
-                }
-                
-                printWindow.document.write('</div>');
-            }
-            
-            printWindow.document.write(`
+        });
+    });
+
+    // Ouverture de la nouvelle fenêtre
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Catalogue de codes-barres</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; background: white; color: black; }
+                    .catalogue-page { page-break-after: always; margin-bottom: 30px; padding: 20px; }
+                    .catalogue-family-title { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px; border-bottom: 2px solid #333; padding-bottom: 5px; }
+                    .catalogue-category-title { font-size: 18px; font-weight: bold; color: #666; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+                    .catalogue-items-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+                    .catalogue-item { page-break-inside: avoid; padding: 10px; border: 1px solid #ddd; border-radius: 4px; display: flex; flex-direction: column; gap: 8px; background: #f9f9f9; min-height: 100px; }
+                    .catalogue-barcode-section { text-align: center; padding: 8px; background: white; border: 1px solid #eee; flex-shrink: 0; height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+                    .catalogue-info-grid { display: grid; grid-template-columns: 1fr; gap: 4px; flex-grow: 1; }
+                    .catalogue-info-item { margin-bottom: 2px; }
+                    .catalogue-info-label { font-size: 8px; color: #666; margin-bottom: 1px; }
+                    .catalogue-info-value { font-size: 10px; font-weight: 500; color: #333; }
+                    .catalogue-no-barcode { font-family: 'Courier New', monospace; font-size: 10px; color: #999; font-weight: bold; margin-top: 5px; }
+                    .catalogue-no-barcode-visual { width: 100%; height: 50px; display: flex; justify-content: center; align-items: center; background: #f0f0f0; border-radius: 3px; border: 1px dashed #ccc; margin-bottom: 5px; }
+                    .catalogue-no-barcode-icon { font-size: 24px; color: #bbb; }
+                    .barcode-svg { width: 100%; height: 50px; max-height: 50px; }
+                    .catalogue-barcode-number { font-family: 'Courier New', monospace; font-size: 10px; font-weight: bold; margin-top: 5px; word-break: break-all; text-align: center; width: 100%; }
+                    @media print {
+                        .catalogue-page { margin: 0; padding: 15px; }
+                        .catalogue-items-grid { gap: 10px; }
+                        .catalogue-item { border: 1px solid #ccc; min-height: 100px; }
+                    }
+                </style>
                 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
-                <script>
-                    setTimeout(() => {
-                        window.print();
-                    }, 500);
-                <\/script>
-                </body>
-                </html>
+            </head>
+            <body>
+                <h1>Catalogue de codes-barres</h1>
+                <div>Généré le ${new Date().toLocaleDateString('fr-FR')} - ${filtered.length} articles</div>
+                ${familleFilter ? `<div>Famille: ${familleFilter}</div>` : ''}
+                <hr style="margin: 10px 0;">
+    `);
+
+    sortedFamilies.forEach((famille, familleIndex) => {
+        const categories = Object.keys(groupedByFamily[famille]).sort();
+
+        printWindow.document.write(`
+            <div class="catalogue-page" id="catalogue-page-${familleIndex}">
+                <div class="catalogue-family-title">Catalogue codes-barres : ${famille}</div>
+                <hr style="border: 1px solid black; margin: 10px 0;">
+        `);
+
+        categories.forEach(categorie => {
+            const articlesInCategory = groupedByFamily[famille][categorie];
+
+            printWindow.document.write(`
+                <div class="catalogue-category-title">${categorie}</div>
+                <div class="catalogue-items-grid">
             `);
-            
-            printWindow.document.close();
-        }
+
+            // Grouper par 3 pour la grille
+            for (let i = 0; i < articlesInCategory.length; i += 3) {
+                const rowArticles = articlesInCategory.slice(i, i + 3);
+
+                // Compléter avec des cellules vides si moins de 3
+                while (rowArticles.length < 3) {
+                    rowArticles.push(null);
+                }
+
+                rowArticles.forEach((art, indexInRow) => {
+                    if (!art) {
+                        printWindow.document.write(`<div class="catalogue-item" style="visibility: hidden;"></div>`);
+                        return;
+                    }
+
+                    const hasBarcode = art.barcode && art.barcode.trim() !== '';
+                    const barcodeId = `catalogue-barcode-svg-${art.id}-${familleIndex}-${i}-${indexInRow}`;
+
+                    // Récupération des champs de la catégorie
+                    const familleObj = familles.find(f => f.nom === famille);
+                    const catObj = familleObj?.categories.find(c => c.nom === categorie);
+                    const champs = catObj?.champs?.sort((x, y) => x.ordre - y.ordre) || [];
+
+                    // Trouver le champ CDT
+                    const cdtChamp = champs.find(ch => ch.label === 'CDT' || ch.label.includes('CONDITIONNEMENT'));
+
+                    // Champs avant CDT (pour la première ligne)
+                    const champsAvantCDT = cdtChamp ? champs.slice(0, champs.indexOf(cdtChamp)) : [];
+
+                    // Construction des deux lignes
+                    const ligne1Parts = [art.name];
+                    champsAvantCDT.forEach(champ => {
+                        const val = art.customValues && art.customValues[champ.label];
+                        if (val) ligne1Parts.push(val);
+                    });
+                    const ligne1 = ligne1Parts.join(' ');
+
+                    let ligne2 = '';
+                    if (cdtChamp) {
+                        const cdtVal = art.customValues && art.customValues[cdtChamp.label];
+                        if (cdtVal) ligne2 += `Cdt ${cdtVal}  `;
+                    }
+                    if (art.fournisseur) ligne2 += `${art.fournisseur}  `;
+                    if (art.reference) ligne2 += `Ref ${art.reference}`;
+
+                    printWindow.document.write(`
+                        <div class="catalogue-item">
+                            <div class="catalogue-barcode-section">
+                                ${hasBarcode ? 
+                                    `<svg id="${barcodeId}" class="barcode-svg"></svg>
+                                     <div class="catalogue-barcode-number"></div>` : 
+                                    `<div class="catalogue-no-barcode-visual">
+                                         <div class="catalogue-no-barcode-icon">🏷️</div>
+                                     </div>
+                                     <div class="catalogue-no-barcode">---------------</div>`
+                                }
+                            </div>
+                            <div class="catalogue-info-grid">
+                                <div class="catalogue-info-item">
+                                    <div class="catalogue-info-value" style="font-weight: bold; font-size: 12px;">
+                                        ${ligne1}
+                                    </div>
+                                </div>
+                                <div class="catalogue-info-item">
+                                    <div class="catalogue-info-value" style="font-size: 12px;">
+                                        ${ligne2}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                });
+            }
+
+            printWindow.document.write(`</div>`); // fermeture items-grid
+        });
+
+        printWindow.document.write(`</div>`); // fermeture catalogue-page
+    });
+
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+
+    // Génération des codes-barres après l'écriture
+    setTimeout(() => {
+        filtered.forEach(art => {
+            if (art.barcode && art.barcode.trim() !== '') {
+                try {
+                    let format = 'CODE128';
+                    if (/^\d{13}$/.test(art.barcode)) {
+                        format = 'EAN13';
+                    }
+
+                    const svgElements = printWindow.document.querySelectorAll(`[id^="catalogue-barcode-svg-${art.id}"]`);
+                    svgElements.forEach(svgElement => {
+                        try {
+                            JsBarcode(svgElement, art.barcode, {
+                                format: format,
+                                width: format === 'EAN13' ? 1.5 : 2,
+                                height: 40,
+                                displayValue: true,
+                                background: "#ffffff",
+                                lineColor: "#000000",
+                                margin: 5,
+                                ...(format === 'EAN13' && { flat: true, lastChar: '>' })
+                            });
+                        } catch (svgError) {
+                            console.error(`Erreur sur SVG:`, svgError);
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Erreur génération code-barre:`, error);
+                }
+            }
+        });
+
+        // Impression après un délai pour laisser les codes-barres se générer
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
+    }, 300);
+}
 
         async function downloadExcel() {
             const familleFilter = document.getElementById('excel-famille-filter').value;
@@ -4253,7 +4534,6 @@
                             id: Date.now() + Math.random(),
                             name: currentName,
                             barcode: '',
-                            famille: familleNom,
                             categorie: categorieNom,
                             fournisseur: currentFournisseur,
                             reference: currentReference,
