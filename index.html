@@ -2009,10 +2009,8 @@
                             <option value="">Sélectionnez une catégorie</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Nom de l'article *</label>
-                        <input type="text" class="form-input" id="article-name" required>
-                    </div>
+                    
+                    <!-- Champ nom supprimé -->
                     
                     <div id="article-custom-fields"></div>
                     
@@ -2066,10 +2064,7 @@
                     <label class="form-label">Catégorie *</label>
                     <input type="text" class="form-input" id="edit-article-categorie" required readonly>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Nom de l'article *</label>
-                    <input type="text" class="form-input" id="edit-article-name" required>
-                </div>
+                <!-- Champ nom supprimé -->
                 <div class="form-group">
                     <label class="form-label">Fournisseur</label>
                     <input type="text" class="form-input" id="edit-article-fournisseur">
@@ -2212,6 +2207,32 @@
             if (modified) saveToStorage();
         }
 
+        // Migration du nom des articles (reconstruit à partir des champs)
+        function migrateArticleNames() {
+            let modified = false;
+            articles.forEach(article => {
+                const famille = familles.find(f => f.nom === article.famille);
+                if (famille) {
+                    const categorie = famille.categories.find(c => c.nom === article.categorie);
+                    if (categorie && categorie.champs) {
+                        const champsTries = [...categorie.champs].sort((a, b) => a.ordre - b.ordre);
+                        let nameParts = [];
+                        for (const champ of champsTries) {
+                            if (champ.useForName && article.customValues && article.customValues[champ.label]) {
+                                nameParts.push(article.customValues[champ.label]);
+                            }
+                        }
+                        const newName = nameParts.join(' ') || 'ARTICLE_SANS_NOM';
+                        if (article.name !== newName) {
+                            article.name = newName;
+                            modified = true;
+                        }
+                    }
+                }
+            });
+            if (modified) saveToStorage();
+        }
+
         // Initialisation par défaut
         if (locations.length === 0) {
             locations = [
@@ -2231,9 +2252,9 @@
                         { 
                             nom: 'VIS', 
                             champs: [
-                                { id: 1, label: 'MATÉRIAU', type: 'texte', obligatoire: false, ordre: 1 },
-                                { id: 2, label: 'FINITION', type: 'texte', obligatoire: false, ordre: 2 },
-                                { id: 3, label: 'POIDS', type: 'nombre', obligatoire: false, ordre: 3 }
+                                { id: 1, label: 'MATÉRIAU', type: 'texte', obligatoire: false, useForName: false, ordre: 1 },
+                                { id: 2, label: 'FINITION', type: 'texte', obligatoire: false, useForName: false, ordre: 2 },
+                                { id: 3, label: 'POIDS', type: 'nombre', obligatoire: false, useForName: false, ordre: 3 }
                             ]
                         },
                         { nom: 'ECROU', champs: [] },
@@ -2247,9 +2268,9 @@
                         { 
                             nom: 'PERCEUSE', 
                             champs: [
-                                { id: 4, label: 'TYPE', type: 'texte', obligatoire: true, ordre: 1 },
-                                { id: 5, label: 'PUISSANCE', type: 'texte', obligatoire: false, ordre: 2 },
-                                { id: 6, label: 'VOLTAGE', type: 'texte', obligatoire: false, ordre: 3 }
+                                { id: 4, label: 'TYPE', type: 'texte', obligatoire: true, useForName: true, ordre: 1 },
+                                { id: 5, label: 'PUISSANCE', type: 'texte', obligatoire: false, useForName: false, ordre: 2 },
+                                { id: 6, label: 'VOLTAGE', type: 'texte', obligatoire: false, useForName: false, ordre: 3 }
                             ]
                         },
                         { nom: 'TOURNEVIS', champs: [] },
@@ -2261,6 +2282,9 @@
         } else {
             migrateFamilles();
         }
+        
+        // Migration des noms après chargement
+        migrateArticleNames();
 
         // Fonctions de stockage
         function saveToStorage() {
@@ -2510,13 +2534,19 @@
                             <button type="button" class="icon-btn" onclick="removeCategorieChampElement(this)">🗑️</button>
                         </div>
                     </div>
-                    <div class="custom-field-required">
-                        <input type="checkbox" id="field-required-${fieldId}" ${champData && champData.obligatoire ? 'checked' : ''}>
-                        <label for="field-required-${fieldId}" style="font-size: 13px; color: #aaa;">Champ obligatoire</label>
+                    <div style="display: flex; gap: 16px; margin-top: 8px;">
+                        <div class="custom-field-required">
+                            <input type="checkbox" id="field-required-${fieldId}" ${champData && champData.obligatoire ? 'checked' : ''}>
+                            <label for="field-required-${fieldId}" style="font-size: 13px; color: #aaa;">Champ obligatoire</label>
+                        </div>
+                        <div class="custom-field-name">
+                            <input type="checkbox" id="field-name-${fieldId}" ${champData && champData.useForName ? 'checked' : ''}>
+                            <label for="field-name-${fieldId}" style="font-size: 13px; color: #aaa;">Utiliser dans le nom</label>
+                        </div>
                     </div>
                 </div>
             `;
-            champsList.innerHTML += fieldHtml;
+            champsList.insertAdjacentHTML('beforeend', fieldHtml);
         }
 
         function removeCategorieChampElement(button) {
@@ -2558,7 +2588,8 @@
                 const fieldId = item.dataset.fieldId;
                 const label = item.querySelector('input[type="text"]').value.trim().toUpperCase();
                 const type = item.querySelector('.field-type-select').value;
-                const obligatoire = item.querySelector('input[type="checkbox"]').checked;
+                const obligatoire = item.querySelector('input[id^="field-required-"]').checked;
+                const useForName = item.querySelector('input[id^="field-name-"]').checked;
                 
                 if (label) {
                     champs.push({
@@ -2566,6 +2597,7 @@
                         label,
                         type,
                         obligatoire,
+                        useForName,
                         ordre: index + 1
                     });
                 }
@@ -2576,6 +2608,9 @@
             saveToStorage();
             closeModal('categorie-champs-modal');
             showEditFamilleModal(familleId);
+            
+            // Reconstruire les noms des articles affectés
+            migrateArticleNames();
         }
 
         function saveFamille(event) {
@@ -2740,7 +2775,6 @@
             
             const barcode = document.getElementById('article-barcode').value.trim();
             const categorieNom = document.getElementById('article-categorie-select').value;
-            const name = document.getElementById('article-name').value.trim().toUpperCase();
             const fournisseur = document.getElementById('article-fournisseur').value.trim().toUpperCase();
             const reference = document.getElementById('article-reference').value.trim().toUpperCase();
             const seuil_bas = parseInt(document.getElementById('article-seuil-bas').value);
@@ -2758,28 +2792,40 @@
                 return;
             }
 
+            // Récupération des champs personnalisés
             const customValues = {};
-            if (categorie.champs && categorie.champs.length > 0) {
-                for (const champ of categorie.champs) {
-                    const input = document.getElementById(`custom-${champ.id}`);
-                    if (input) {
-                        const value = champ.type === 'nombre' ? parseFloat(input.value) || 0 : input.value.trim().toUpperCase();
-                        if (champ.obligatoire && !value && value !== 0) {
-                            alert(`Le champ "${champ.label}" est obligatoire`);
-                            return;
-                        }
-                        customValues[champ.label] = value;
+            const champs = categorie.champs || [];
+            const champsTries = [...champs].sort((a, b) => a.ordre - b.ordre);
+            
+            for (const champ of champsTries) {
+                const input = document.getElementById(`custom-${champ.id}`);
+                if (input) {
+                    const value = champ.type === 'nombre' ? parseFloat(input.value) || 0 : input.value.trim().toUpperCase();
+                    if (champ.obligatoire && !value && value !== 0) {
+                        alert(`Le champ "${champ.label}" est obligatoire`);
+                        return;
                     }
+                    customValues[champ.label] = value;
                 }
             }
 
+            // Construction du nom à partir des champs marqués "useForName"
+            let nameParts = [];
+            for (const champ of champsTries) {
+                if (champ.useForName && customValues[champ.label]) {
+                    nameParts.push(customValues[champ.label]);
+                }
+            }
+            let name = nameParts.join(' ') || 'ARTICLE_SANS_NOM';
+
+            // Vérifier si l'article existe déjà
             let existingArticle = null;
             
             if (barcode) {
                 existingArticle = articles.find(a => a.barcode === barcode);
             } else {
                 existingArticle = articles.find(a => 
-                    a.name.toLowerCase() === name.toLowerCase() &&
+                    a.name === name && 
                     a.famille === famille.nom &&
                     a.categorie === categorieNom
                 );
@@ -2796,6 +2842,9 @@
 
                 existingArticle.seuil_bas = seuil_bas;
                 existingArticle.customValues = { ...existingArticle.customValues, ...customValues };
+                existingArticle.fournisseur = fournisseur;
+                existingArticle.reference = reference;
+                existingArticle.name = name; // Mise à jour du nom si changement
 
                 addHistory('Ajout', name, `+${nombre} à ${locations.find(l => l.id.toString() === locationId).name}`);
             } else {
@@ -2838,7 +2887,7 @@
             document.getElementById('edit-article-barcode').value = article.barcode || '';
             document.getElementById('edit-article-famille').value = article.famille || '';
             document.getElementById('edit-article-categorie').value = article.categorie || '';
-            document.getElementById('edit-article-name').value = article.name || '';
+            // Champ nom supprimé
             document.getElementById('edit-article-fournisseur').value = article.fournisseur || '';
             document.getElementById('edit-article-reference').value = article.reference || '';
             document.getElementById('edit-article-seuil-bas').value = article.seuil_bas || 0;
@@ -2878,17 +2927,19 @@
             if (!article) return;
             
             article.barcode = document.getElementById('edit-article-barcode').value.trim();
-            article.name = document.getElementById('edit-article-name').value.trim().toUpperCase();
             article.fournisseur = document.getElementById('edit-article-fournisseur').value.trim().toUpperCase();
             article.reference = document.getElementById('edit-article-reference').value.trim().toUpperCase();
             article.seuil_bas = parseInt(document.getElementById('edit-article-seuil-bas').value);
             
+            // Récupération des champs personnalisés
             const famille = familles.find(f => f.nom === article.famille);
             if (famille) {
                 const categorie = famille.categories.find(c => c.nom === article.categorie);
                 if (categorie && categorie.champs) {
                     if (!article.customValues) article.customValues = {};
-                    for (const champ of categorie.champs) {
+                    const champsTries = [...categorie.champs].sort((a, b) => a.ordre - b.ordre);
+                    
+                    for (const champ of champsTries) {
                         const input = document.getElementById(`edit-custom-${champ.id}`);
                         if (input) {
                             const value = champ.type === 'nombre' ? parseFloat(input.value) || 0 : input.value.trim().toUpperCase();
@@ -2899,6 +2950,15 @@
                             article.customValues[champ.label] = value;
                         }
                     }
+                    
+                    // Reconstruire le nom
+                    let nameParts = [];
+                    for (const champ of champsTries) {
+                        if (champ.useForName && article.customValues[champ.label]) {
+                            nameParts.push(article.customValues[champ.label]);
+                        }
+                    }
+                    article.name = nameParts.join(' ') || 'ARTICLE_SANS_NOM';
                 }
             }
             
@@ -3025,7 +3085,6 @@
 
         // Affichage des articles avec tri alphabétique
         function displayArticles(filtered) {
-    // Regrouper par famille puis catégorie
     const grouped = {};
     filtered.forEach(art => {
         const famille = art.famille || 'Sans famille';
@@ -3035,63 +3094,36 @@
         grouped[famille][categorie].push(art);
     });
 
-    // Trier les familles et catégories alphabétiquement
     const sortedFamilies = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
-
     let html = '';
 
     sortedFamilies.forEach(famille => {
         const categories = grouped[famille];
         const sortedCategories = Object.keys(categories).sort((a, b) => a.localeCompare(b));
 
-        // En-tête de famille
         html += `<div class="detail-section" style="margin-top: 16px;">`;
         html += `<div class="section-title" style="font-size: 18px; color: #bb86fc;">📁 ${famille}</div>`;
 
         sortedCategories.forEach(categorie => {
             const articlesInCat = categories[categorie];
-            // Tri des articles par nom (et éventuellement champs avant CDT)
             const sortedArticles = [...articlesInCat].sort((a, b) => a.name.localeCompare(b.name));
 
-            // En-tête de catégorie
             html += `<div style="margin-top: 12px;">`;
             html += `<div style="font-size: 16px; color: #03dac6; margin-bottom: 8px;">🏷️ ${categorie}</div>`;
 
-            // Liste des articles de cette catégorie
             sortedArticles.forEach(art => {
                 const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
-
-                // Construction de la ligne d'information (nom + champs avant CDT)
-                let ligneInfo = art.name;
-                const familleObj = familles.find(f => f.nom === famille);
-                if (familleObj) {
-                    const catObj = familleObj.categories.find(c => c.nom === categorie);
-                    if (catObj && catObj.champs && catObj.champs.length > 0) {
-                        const champsTriés = [...catObj.champs].sort((a, b) => a.ordre - b.ordre);
-                        const cdtChamp = champsTriés.find(c => c.label === 'CDT' || c.label.includes('CONDITIONNEMENT'));
-                        const champsAvantCDT = cdtChamp ? champsTriés.slice(0, champsTriés.indexOf(cdtChamp)) : [];
-                        const partsAvant = champsAvantCDT
-                            .map(champ => art.customValues && art.customValues[champ.label] ? art.customValues[champ.label] : '')
-                            .filter(v => v !== '');
-                        if (partsAvant.length > 0) {
-                            ligneInfo += ' ' + partsAvant.join(' ');
-                        }
-                    }
-                }
-
-                // Indicateurs de stock (pastilles)
                 const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
                 const isVeryLowStock = totalQty === 0;
                 const stockIndicators = [];
                 if (isLowStock) stockIndicators.push('<span class="stock-low-indicator" title="Stock faible"></span>');
                 if (isVeryLowStock) stockIndicators.push('<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>');
 
-                // Carte article avec total à droite
                 html += `
                     <div class="article-card" onclick="showArticleDetail('${art.id}')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
                         <div style="flex: 1;">
                             <div style="font-weight: 600; color: #e0e0e0;">
-                                ${ligneInfo} ${stockIndicators.join(' ')}
+                                ${art.name} ${stockIndicators.join(' ')}
                             </div>
                             <div style="font-size: 12px; color: #888; margin-top: 2px;">
                                 ${art.fournisseur ? art.fournisseur + ' ' : ''}${art.reference ? 'Ref ' + art.reference : ''}
@@ -3104,10 +3136,10 @@
                 `;
             });
 
-            html += `</div>`; // fin catégorie
+            html += `</div>`;
         });
 
-        html += `</div>`; // fin famille
+        html += `</div>`;
     });
 
     if (html === '') {
@@ -3165,7 +3197,6 @@ function renderInventoryAccordion(filteredArticles) {
             const catKey = `${famille}|${categorie}`;
             const isOpen = inventoryOpenCategories[catKey] || false;
 
-            // En‑tête de catégorie cliquable
             html += `
                 <div class="category-header" data-catkey="${catKey}" style="cursor: pointer; margin-top: 8px; padding: 8px; background: #1e1e1e; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 16px; color: #03dac6;">🏷️ ${categorie}</span>
@@ -3174,35 +3205,16 @@ function renderInventoryAccordion(filteredArticles) {
                 </div>
             `;
 
-            // Contenu de la catégorie (visible si ouvert)
             html += `<div class="category-content" data-catkey="${catKey}" style="display: ${isOpen ? 'block' : 'none'};">`;
 
-            // Tri des articles (par nom puis éventuellement champs avant CDT)
             const sortedArticles = [...articlesInCat].sort((a, b) => a.name.localeCompare(b.name));
             sortedArticles.forEach(art => {
                 const totalQty = Object.values(art.quantities || {}).reduce((s, q) => s + q.nombre, 0);
                 const locs = Object.entries(art.quantities || {}).filter(([_, q]) => q.nombre > 0);
 
-                // Construction de la ligne d'information (nom + champs avant CDT)
-                let ligneInfo = art.name;
-                const familleObj = familles.find(f => f.nom === famille);
-                if (familleObj) {
-                    const catObj = familleObj.categories.find(c => c.nom === categorie);
-                    if (catObj && catObj.champs) {
-                        const champsTriés = [...catObj.champs].sort((a, b) => a.ordre - b.ordre);
-                        const cdtChamp = champsTriés.find(c => c.label === 'CDT' || c.label.includes('CONDITIONNEMENT'));
-                        const champsAvantCDT = cdtChamp ? champsTriés.slice(0, champsTriés.indexOf(cdtChamp)) : [];
-                        const partsAvant = champsAvantCDT
-                            .map(champ => art.customValues && art.customValues[champ.label] ? art.customValues[champ.label] : '')
-                            .filter(v => v !== '');
-                        if (partsAvant.length > 0) {
-                            ligneInfo += ' ' + partsAvant.join(' ');
-                        }
-                    }
-                }
-
                 // Valeur du conditionnement (champ CDT)
                 let cdtValue = '';
+                const familleObj = familles.find(f => f.nom === famille);
                 if (familleObj) {
                     const catObj = familleObj.categories.find(c => c.nom === categorie);
                     if (catObj && catObj.champs) {
@@ -3213,7 +3225,6 @@ function renderInventoryAccordion(filteredArticles) {
                     }
                 }
 
-                // Indicateurs de stock (pastilles)
                 const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
                 const isVeryLowStock = totalQty === 0;
                 const stockIndicators = [];
@@ -3225,7 +3236,7 @@ function renderInventoryAccordion(filteredArticles) {
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="flex: 1;">
                                 <div style="font-weight: 600; color: #e0e0e0;">
-                                    ${ligneInfo} ${stockIndicators.join(' ')}
+                                    ${art.name} ${stockIndicators.join(' ')}
                                 </div>
                                 <div style="font-size: 12px; color: #888; margin-top: 2px;">
                                     ${cdtValue ? 'Cdt ' + cdtValue : ''} ${art.fournisseur ? art.fournisseur : ''} ${art.reference ? 'Ref ' + art.reference : ''}
@@ -3245,10 +3256,10 @@ function renderInventoryAccordion(filteredArticles) {
                 `;
             });
 
-            html += `</div>`; // fin category-content
+            html += `</div>`;
         });
 
-        html += `</div>`; // fin famille
+        html += `</div>`;
     });
 
     if (html === '') {
@@ -3257,7 +3268,6 @@ function renderInventoryAccordion(filteredArticles) {
 
     document.getElementById('article-list').innerHTML = html;
 
-    // Attacher les événements de clic sur les en‑têtes de catégorie
     document.querySelectorAll('.category-header').forEach(header => {
         header.addEventListener('click', function(e) {
             const catKey = this.dataset.catkey;
@@ -3333,7 +3343,6 @@ function renderInventoryAccordion(filteredArticles) {
         art.quantities && art.quantities[locationId] && art.quantities[locationId].nombre > 0
     );
     
-    // Tri alphabétique
     const sorted = [...locationArticles].sort((a, b) => a.name.localeCompare(b.name));
     
     const articlesHtml = sorted.map(art => {
@@ -3342,41 +3351,12 @@ function renderInventoryAccordion(filteredArticles) {
         const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
         const isVeryLowStock = totalQty === 0;
         
-        // Récupérer les champs à afficher entre NOM et CDT (ou NOM et FOURNISSEUR)
-        let extraFields = '';
-        const famille = familles.find(f => f.nom === art.famille);
-        if (famille) {
-            const categorie = famille.categories.find(c => c.nom === art.categorie);
-            if (categorie && categorie.champs && categorie.champs.length > 0) {
-                const champsTriés = [...categorie.champs].sort((a, b) => a.ordre - b.ordre);
-                
-                const indexCDT = champsTriés.findIndex(c =>
-                    c.label === 'CDT' || c.label.includes('CONDITIONNEMENT')
-                );
-                
-                const champsAvantCDT = indexCDT > 0
-                    ? champsTriés.slice(0, indexCDT)
-                    : champsTriés;
-                
-                const parts = champsAvantCDT
-                    .map(champ => art.customValues && art.customValues[champ.label]
-                        ? art.customValues[champ.label]
-                        : null)
-                    .filter(Boolean);
-                
-                if (parts.length > 0) {
-                    extraFields = `<span class="article-extra-fields">${parts.join(' · ')}</span>`;
-                }
-            }
-        }
-        
         return `
             <div class="article-card" onclick="showArticleDetail('${art.id}')">
                 <div class="article-header">
                     <div>
                         <div class="article-name">
                             ${art.name}
-                            ${extraFields}
                             ${isLowStock ? '<span class="stock-low-indicator" title="Stock faible"></span>' : ''}
                             ${isVeryLowStock ? '<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>' : ''}
                         </div>
@@ -3752,7 +3732,6 @@ function renderInventoryAccordion(filteredArticles) {
         });
     }
     
-    // Tri alphabétique
     const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     
     const resultsHtml = sorted.map(art => {
@@ -3762,41 +3741,12 @@ function renderInventoryAccordion(filteredArticles) {
         const isLowStock = totalQty <= (art.seuil_bas || 0) && totalQty > 0;
         const isVeryLowStock = totalQty === 0;
         
-        // Récupérer les champs à afficher entre NOM et CDT (ou NOM et FOURNISSEUR)
-        let extraFields = '';
-        const famille = familles.find(f => f.nom === art.famille);
-        if (famille) {
-            const categorie = famille.categories.find(c => c.nom === art.categorie);
-            if (categorie && categorie.champs && categorie.champs.length > 0) {
-                const champsTriés = [...categorie.champs].sort((a, b) => a.ordre - b.ordre);
-                
-                const indexCDT = champsTriés.findIndex(c =>
-                    c.label === 'CDT' || c.label.includes('CONDITIONNEMENT')
-                );
-                
-                const champsAvantCDT = indexCDT > 0
-                    ? champsTriés.slice(0, indexCDT)
-                    : champsTriés;
-                
-                const parts = champsAvantCDT
-                    .map(champ => art.customValues && art.customValues[champ.label]
-                        ? art.customValues[champ.label]
-                        : null)
-                    .filter(Boolean);
-                
-                if (parts.length > 0) {
-                    extraFields = `<span class="article-extra-fields">${parts.join(' · ')}</span>`;
-                }
-            }
-        }
-        
         return `
             <div class="article-card" onclick="showArticleDetail('${art.id}')">
                 <div class="article-header">
                     <div>
                         <div class="article-name">
                             ${art.name}
-                            ${extraFields}
                             ${isLowStock ? '<span class="stock-low-indicator" title="Stock faible"></span>' : ''}
                             ${isVeryLowStock ? '<span class="stock-low-indicator stock-very-low-indicator" title="Stock très faible"></span>' : ''}
                         </div>
