@@ -63,6 +63,7 @@
             justify-content: space-between;
             align-items: center;
             width: 100%;
+            gap: 8px;
         }
 
         .header-title {
@@ -101,6 +102,31 @@
         .header-menu-btn:active {
             background: rgba(187, 134, 252, 0.1);
             transform: scale(0.95);
+        }
+
+        /* Nouveau style pour le bouton + dans l'en-tête */
+        .fab.header-fab {
+            position: relative;
+            background: linear-gradient(135deg, #bb86fc 0%, #9965f4 100%);
+            color: #000;
+            border: none;
+            border-radius: 40px;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .fab.header-fab:active {
+            transform: scale(0.95);
+            background: linear-gradient(135deg, #9965f4 0%, #7b4bcb 100%);
         }
 
         .container {
@@ -289,28 +315,9 @@
             border: 1px solid #333;
         }
 
+        /* Suppression du style flottant original pour .fab */
         .fab {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #bb86fc 0%, #9965f4 100%);
-            border-radius: 50%;
-            border: none;
-            box-shadow: 0 6px 20px rgba(187, 134, 252, 0.5);
-            color: #000;
-            font-size: 28px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            z-index: 50;
-        }
-
-        .fab:active {
-            transform: scale(0.9);
+            display: none; /* Les anciens FAB sont cachés, on utilise .fab.header-fab à la place */
         }
 
         .speed-dial {
@@ -1652,6 +1659,7 @@
                     <h1>📋 Inventaire</h1>
                     <div class="header-subtitle">Liste des articles</div>
                 </div>
+                <button class="fab header-fab" onclick="showAddArticleModal()">+</button>
                 <button class="header-menu-btn" onclick="toggleMenu()">☰</button>
             </div>
         </div>
@@ -1664,7 +1672,6 @@
 
             <div class="article-list" id="article-list"></div>
         </div>
-        <button class="fab" onclick="showAddArticleModal()">+</button>
     </div>
 
     <!-- Page Scanner -->
@@ -1804,13 +1811,13 @@
                     <h1>📍 Emplacements</h1>
                     <div class="header-subtitle">Gestion des lieux</div>
                 </div>
+                <button class="fab header-fab" onclick="showAddLocationModal()">+</button>
                 <button class="header-menu-btn" onclick="toggleMenu()">☰</button>
             </div>
         </div>
         <div class="container">
             <div id="locations-list"></div>
         </div>
-        <button class="fab" onclick="showAddLocationModal()">+</button>
     </div>
 
     <!-- Page Familles -->
@@ -1821,13 +1828,13 @@
                     <h1>📁 Familles</h1>
                     <div class="header-subtitle">Gestion des familles d'articles</div>
                 </div>
+                <button class="fab header-fab" onclick="showAddFamilleModal()">+</button>
                 <button class="header-menu-btn" onclick="toggleMenu()">☰</button>
             </div>
         </div>
         <div class="container">
             <div id="familles-list"></div>
         </div>
-        <button class="fab" onclick="showAddFamilleModal()">+</button>
     </div>
 
     <!-- Page Import/Export -->
